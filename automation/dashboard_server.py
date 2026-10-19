@@ -3164,28 +3164,6 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					self._write_json(HTTPStatus.OK, {"ok": False, "error": str(exc)})
 				return
 
-			# (dead code kept for when Flask is retired and routes move here natively)
-			if False and path == "/api/dlp-alerts-native":
-				alert_id = path[len("/api/dlp-alerts/"):]
-				try:
-					import config as _cfg
-					import auth.token_manager as _tm
-					import requests as _req
-					try: _cfg.load()
-					except Exception: pass
-					_tm.init(_cfg.TENANT_ID, _cfg.CLIENT_ID, _cfg.CLIENT_SECRET)
-					token = _tm.get_graph_token()
-					r = _req.get(
-						f"https://graph.microsoft.com/v1.0/security/alerts_v2/{alert_id}",
-						headers={"Authorization": f"Bearer {token}"}, timeout=15,
-					)
-					if not r.ok:
-						raise Exception(f"Graph {r.status_code}: {r.text[:300]}")
-					self._write_json(HTTPStatus.OK, {"ok": True, "alert": r.json()})
-				except Exception as exc:
-					self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(exc)})
-				return
-
 			# Report data (requires Graph — returns empty if not configured)
 			if path == "/api/report/data":
 				try:
