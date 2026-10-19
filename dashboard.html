@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedFlagged | Incident Automation Console</title>
+  <link rel="icon" type="image/png" href="dashboard-icon.png" />
+  <link rel="apple-touch-icon" href="dashboard-icon.png" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="notificationContainer" class="notification-container"></div>
+
+  <div id="agent-support-modal" class="incident-modal" aria-hidden="true">
+    <div class="agent-support-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-support-modal-title">
+      <div class="incident-modal-header">
+        <h3 id="agent-support-modal-title">Online Agent Support</h3>
+        <button type="button" id="agent-support-modal-close" class="incident-modal-close" aria-label="Close">x</button>
+      </div>
+      <div class="agent-support-modal-content odin-chat-modal-content">
+        <div class="odin-chat-shell">
+          <div id="odin-chat-thread" class="odin-chat-thread" role="log" aria-live="polite" aria-label="Odin chatbot conversation"></div>
+          <div class="odin-chat-quick-actions" aria-label="Suggested prompts">
+            <button type="button" class="odin-chat-quick" data-prompt="Summarize the selected incident risk in one paragraph.">Summarize Risk</button>
+            <button type="button" class="odin-chat-quick" data-prompt="What evidence should I validate first for this incident?">Evidence Checklist</button>
+            <button type="button" class="odin-chat-quick" data-prompt="Suggest next containment steps for this incident.">Containment Steps</button>
+          </div>
+          <div class="odin-chat-input-row">
+            <input id="odin-chat-input" type="text" aria-label="Ask Odin" placeholder="Ask Odin about this incident..." />
+            <button type="button" id="odin-chat-send" class="chip good chip-button" aria-label="Send message">Send</button>
+          </div>
+          <small class="mono odin-chat-note">Mock chatbot UI only. API integration can be connected later.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resolve-modal" class="incident-modal" aria-hidden="true">
+    <div class="agent-support-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="resolve-modal-title">
+      <div class="incident-modal-header">
+        <h3 id="resolve-modal-title">Resolve Incident</h3>
+        <button type="button" id="resolve-modal-close" class="incident-modal-close" aria-label="Close">x</button>
+      </div>
+      <div class="agent-support-modal-content">
+        <div class="card">
+          <h3>Incident Details</h3>
+          <div class="meta">
+            <div class="kv"><span>Incident Name</span><b class="mono" id="resolve-incident-name">N/A</b></div>
+            <div class="kv"><span>Incident ID</span><b class="mono" id="resolve-incident-id">N/A</b></div>
+            <div class="kv"><span>Ticket</span><b class="mono" id="resolve-ticket-id">N/A</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="resolve-classification-wrap">
+            <h3>Incident Classification</h3>
+            <select id="resolve-classification" class="resolve-classification-select" aria-label="Select incident classification">
+              <option value="Unclassified">Unclassified</option>
+              <optgroup label="True positive">
+                <option value="True Positive: Multi staged attack">Multi staged attack</option>
+                <option value="True Positive: Malware">Malware</option>
+                <option value="True Positive: Malicious user activity">Malicious user activity</option>
+                <option value="True Positive: Unwanted software">Unwanted software</option>
+                <option value="True Positive: Phishing">Phishing</option>
+                <option value="True Positive: Compromised account">Compromised account</option>
+                <option value="True Positive: Other">Other</option>
+              </optgroup>
+              <optgroup label="Informational, expected activity">
+                <option value="Informational, expected activity: Security testing">Security testing</option>
+                <option value="Informational, expected activity: Confirmed activity">Confirmed activity</option>
+                <option value="Informational, expected activity: Line of business application">Line of business application</option>
+                <option value="Informational, expected activity: Other">Other</option>
+              </optgroup>
+              <optgroup label="False positive">
+                <option value="False Positive: Not malicious">Not malicious</option>
+                <option value="False Positive: Not enough data to validate">Not enough data to validate</option>
+                <option value="False Positive: Other">Other</option>
+              </optgroup>
+            </select>
+          </div>
+          <h3>Resolution Note</h3>
+          <textarea id="resolve-note" class="modal-comment-box" placeholder="Add resolution note for this incident..."></textarea>
+          <h3>Explain why you resolved this incident</h3>
+          <textarea id="resolve-explanation" class="modal-comment-box" placeholder="Explain why you resolved this incident..."></textarea>
+          <div class="incident-actions" style="margin-top: 10px; justify-content: flex-end;">
+            <button type="button" id="resolve-cancel" class="badge warn">Cancel</button>
+            <button type="button" id="resolve-save" class="badge good">Resolve</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="incident-modal" class="incident-modal" aria-hidden="true">
+    <div class="incident-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="incident-modal-title">
+      <div class="incident-modal-header">
+        <h3 id="incident-modal-title">Incident Review</h3>
+        <button type="button" id="incident-modal-close" class="incident-modal-close" aria-label="Close">x</button>
+      </div>
+      <div class="incident-modal-body">
+        <div class="incident-modal-layout">
+          <section class="incident-pane incident-pane-left">
+            <div class="incident-pane-header">
+              <div class="panel-title">
+                <h2>Incident Overview</h2>
+                <span>Unified view of case details and evidence collected</span>
+              </div>
+            </div>
+            <div class="incident-pane-content">
+              <div class="incident-modal-grid">
+                <div class="card case-details">
+                  <h3>Case Details</h3>
+                  <div class="meta">
+                    <div class="kv"><span>Incident Name</span><b class="mono" id="modal-incident-name">N/A</b></div>
+                    <div class="kv"><span>Incident ID</span><b class="mono" id="modal-incident-id">N/A</b></div>
+                    <div class="kv"><span>ServiceNow Ticket</span><b class="mono" id="modal-ticket-number">N/A</b></div>
+                    <div class="kv"><span>Date</span><b class="mono" id="modal-date">N/A</b></div>
+                    <div class="kv"><span>Status</span><span class="badge warn" id="modal-status">In Progress</span></div>
+                    <div class="kv"><span>Assignee</span><b id="modal-assigned-to">Security Managed Services</b></div>
+                    <div class="kv"><span>Source</span><b id="modal-source">Microsoft Purview + Sentinel</b></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Executive Summary</h3>
+                  <div class="meta">
+                    <div class="kv"><span>Detection</span><b id="modal-detection">Potential Sensitive Data Exfiltration</b></div>
+                    <div class="kv"><span>Actor</span><b id="modal-actor">user@company.com</b></div>
+                    <div class="kv"><span>Location</span><b id="modal-location">SharePoint Online</b></div>
+                    <div class="kv"><span>Policy</span><b id="modal-policy">DLP - Confidential Data</b></div>
+                    <div class="kv"><span>Recommendation</span><span class="badge bad" id="modal-recommendation">Contain &amp; Validate</span></div>
+                  </div>
+                </div>
+                <div class="card" style="grid-column: 1 / -1;">
+                  <h3>Artifacts (Collected Evidence)</h3>
+                  <ul class="list" id="modal-artifacts-list">
+                    <li><div><span>No artifact selected</span><br /><small class="mono" style="color: var(--muted);">N/A</small></div><span class="badge warn">Pending</span></li>
+                  </ul>
+                  <div id="modal-artifacts-pagination" class="classification-history-pagination"></div>
+                </div>
+                <div class="card" style="grid-column: 1 / -1;">
+                  <h3>Recommended Actions</h3>
+                  <ul class="list" id="modal-actions-list">
+                    <li class="modal-action-item" data-action-key="validate" tabindex="0" role="button" aria-label="Validate Incident Correlation"><div><span>1) Validate Incident Correlation</span><br /><small style="color: var(--muted);">Cross-check Sentinel correlation + Purview policy match.</small></div><span class="badge good">Auto</span></li>
+                    <li class="modal-action-item" data-action-key="collect" tabindex="0" role="button" aria-label="Collect Missing Artifacts"><div><span>2) Collect Missing Artifacts</span><br /><small style="color: var(--muted);">Pull audit logs, file metadata, and sharing links.</small></div><span class="badge warn">Manual</span></li>
+                    <li class="modal-action-item" data-action-key="contain" tabindex="0" role="button" aria-label="Containment"><div><span>3) Containment (If Confirmed)</span><br /><small style="color: var(--muted);">Revoke access, quarantine file, or block sharing as per policy.</small></div><span class="badge bad">Approval</span></li>
+                  </ul>
+                  <div class="recommended-comment-wrap">
+                    <h3>Analyst Comment</h3>
+                    <textarea id="modal-comment-box" class="modal-comment-box" placeholder="Add analyst notes for this incident..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="incident-pane-footer"><div>Powered by <b>Red<span class="flagged-red">Flagged</span></b> automation</div><div class="mono">Session: Modal Review</div></div>
+          </section>
+
+          <section class="incident-pane incident-pane-right">
+            <div class="incident-pane-header">
+              <div class="panel-title"><h2>Odin Summary</h2><span>AI-assisted triage summary and recommended next actions</span></div>
+              <div class="chips"><button type="button" id="modal-agent-support-toggle" class="chip good chip-button" aria-expanded="false">Agent: Unassigned</button><div class="chip warn" id="modal-odin-mode">Mode: Safe</div></div>
+            </div>
+            <div class="incident-pane-content">
+              <div id="modal-agent-support-panel" class="agent-support-panel" aria-hidden="true">
+                <div class="agent-support-header"><strong>Assigned Agent</strong><span class="badge good" id="modal-assigned-agent-status">Online</span></div>
+                <div class="agent-support-text">Primary incident owner and handling queue for this case.</div>
+                <ul class="agent-support-list">
+                  <li><strong id="modal-assigned-agent-name">Unassigned</strong></li>
+                  <li id="modal-assigned-agent-queue">Security Managed Services</li>
+                  <li id="modal-assigned-agent-focus">Review case ownership, validate evidence, and proceed with containment approvals if needed.</li>
+                </ul>
+              </div>
+              <div class="odin-shell">
+                <div class="odin-highlight">
+                  <div class="odin-highlight-head"><span class="badge warn">ODIN - AI Findings</span><div class="odin-confidence"><small>Confidence</small><b id="modal-odin-confidence">82%</b><span class="badge warn" id="modal-odin-confidence-label">Needs Review</span></div></div>
+                  <h4>Summary of Assessment</h4>
+                  <div id="modal-odin-summary" class="odin-summary-box modal-odin-text">Odin summary will appear here.</div>
+                </div>
+                <div class="odin-block"><h4>What happened</h4><ul id="modal-odin-what" class="odin-list"><li>Correlation matched policy and alert signals for this incident.</li><li>Sensitive indicators were detected in shared content.</li><li>Activity suggests potential external data movement risk.</li></ul></div>
+                <div class="odin-block"><h4>Why it matters</h4><ul id="modal-odin-why" class="odin-list"><li>Possible exposure of regulated data and policy breach.</li><li>Escalated risk if sharing and downloads are confirmed.</li><li>SLA impact expected if containment is delayed.</li></ul></div>
+                <div class="odin-block"><h4>Recommended next actions</h4><ol id="modal-odin-actions" class="odin-list-ordered"><li>Validate sharing settings and recipients for affected files.</li><li>Confirm user intent via manager or owner and review access logs.</li><li>If confirmed, start containment and update the ticket.</li></ol></div>
+              </div>
+            </div>
+            <div class="incident-pane-footer"><div>Tip: Validate evidence before escalation</div><div class="mono">Session: RF-9C2A</div></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <img class="logo" src="dashboard-icon.png" alt="RedFlagged logo" />
+      <div>Red<span class="flagged-red">Flagged</span><small>Incident Automation Console</small></div>
+    </div>
+    <nav class="nav" aria-label="Top Navigation">
+      <a href="#" id="tab-incidents" class="active">Incidents</a>
+      <a href="#" id="tab-executive">Executive</a>
+      <a href="#" id="tab-artifacts">Artifacts</a>
+      <a href="#" id="tab-monitoring">Monitoring</a>
+      <a href="#" id="tab-selectors">Selectors</a>
+      <a href="#" id="tab-settings">Settings</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><h2 id="main-panel-title">Incident Overview</h2><span id="main-panel-subtitle">Unified view of case details and evidence collected</span></div>
+      </div>
+      <div class="content">
+        <div id="incidents-tab-content" class="tab-content active">
+          <div class="incident-table-card" style="grid-column: 1 / -1;">
+            <!-- Filter bar -->
+            <div class="idf-filter-bar">
+              <select id="idf-filterset-select" class="idf-filterset-select" aria-label="Select filter set">
+                <option value="all">All incidents</option>
+                <option value="open">Open</option>
+                <option value="high">High severity</option>
+                <option value="assigned">Assigned to me</option>
+              </select>
+              <button type="button" id="idf-save-btn" class="idf-action-btn">Save</button>
+              <div class="idf-chips-row" id="idf-chips-row" role="list" aria-label="Active filters"></div>
+              <div class="idf-filter-bar-spacer"></div>
+              <div class="idf-add-filter-wrap">
+                <button type="button" id="idf-add-filter-btn" class="idf-action-btn idf-add-filter-btn" aria-haspopup="true" aria-expanded="false">+ Add filter</button>
+                <div id="idf-add-filter-popover" class="idf-filter-popover" role="menu" aria-label="Add filter options">
+                  <div class="idf-popover-section">
+                    <div class="idf-popover-section-title">Severity</div>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="severity" data-filter-value="High" data-filter-label="Severity: High">High</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="severity" data-filter-value="Medium" data-filter-label="Severity: Medium">Medium</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="severity" data-filter-value="Low" data-filter-label="Severity: Low">Low</button>
+                  </div>
+                  <div class="idf-popover-section">
+                    <div class="idf-popover-section-title">Status</div>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="status" data-filter-value="Open" data-filter-label="Status: Open">Open</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="status" data-filter-value="In Progress" data-filter-label="Status: In Progress">In Progress</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="status" data-filter-value="Pending" data-filter-label="Status: Pending">Pending</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="status" data-filter-value="Resolved" data-filter-label="Status: Resolved">Resolved</button>
+                  </div>
+                  <div class="idf-popover-section">
+                    <div class="idf-popover-section-title">Classification</div>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="classification" data-filter-value="True Positive" data-filter-label="Classification: True Positive">True Positive</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="classification" data-filter-value="False Positive" data-filter-label="Classification: False Positive">False Positive</button>
+                    <button type="button" class="idf-popover-item" role="menuitem" data-filter-type="classification" data-filter-value="Benign" data-filter-label="Classification: Benign">Benign</button>
+                  </div>
+                </div>
+              </div>
+              <button type="button" id="idf-reset-btn" class="idf-action-btn idf-reset-btn">Reset all</button>
+            </div>
+            <!-- Incidents table -->
+            <div class="incident-table-wrap">
+              <table id="incidents-table" class="incident-table idf-table" aria-label="Incidents table" role="treegrid">
+                <colgroup id="incidents-table-colgroup">
+                  <col style="width:32px" /><!-- chevron -->
+                  <col /><!-- name – flexible -->
+                  <col style="width:128px" /><!-- incident ID -->
+                  <col style="width:72px" /><!-- severity -->
+                  <col style="width:82px" /><!-- assets -->
+                  <col style="width:108px" /><!-- first activity -->
+                  <col style="width:108px" /><!-- last activity -->
+                  <col style="width:90px" /><!-- status -->
+                  <col style="width:96px" /><!-- assigned to -->
+                </colgroup>
+                <thead id="incidents-table-head">
+                  <tr>
+                    <th class="idf-th-chevron" aria-label="Expand"></th>
+                    <th class="idf-th-name">Incident name</th>
+                    <th>Incident ID</th>
+                    <th>Severity</th>
+                    <th>Impacted assets</th>
+                    <th>First activity</th>
+                    <th>Last activity</th>
+                    <th>Status</th>
+                    <th>Assigned to</th>
+                  </tr>
+                </thead>
+                <tbody id="incidents-table-body">
+                  <tr><td colspan="9" class="incident-empty">Loading incidents...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="incidents-pagination" class="incidents-pagination"></div>
+          </div>
+        </div>
+
+        <div id="executive-tab-content" class="tab-content">
+          <div class="card" style="grid-column: 1 / -1;">
+            <h3>Executive Dashboard</h3>
+            <div class="executive-grid" id="executive-metrics-grid">
+              <div class="executive-metric-card"><small>Total Incidents</small><b id="metric-total-incidents">0</b></div>
+              <div class="executive-metric-card"><small>True Positive</small><b id="metric-true-positive">0</b></div>
+              <div class="executive-metric-card"><small>False Positive</small><b id="metric-false-positive">0</b></div>
+              <div class="executive-metric-card"><small>Benign</small><b id="metric-benign">0</b></div>
+            </div>
+            <div class="executive-chart-card">
+              <h3>Classification Distribution</h3>
+              <div class="chart-row"><span>True Positive</span><div class="chart-bar"><div id="class-chart-true-positive" class="chart-fill good"></div></div><small id="class-chart-true-positive-count">0</small></div>
+              <div class="chart-row"><span>False Positive</span><div class="chart-bar"><div id="class-chart-false-positive" class="chart-fill bad"></div></div><small id="class-chart-false-positive-count">0</small></div>
+              <div class="chart-row"><span>Benign</span><div class="chart-bar"><div id="class-chart-benign" class="chart-fill warn"></div></div><small id="class-chart-benign-count">0</small></div>
+            </div>
+            <div class="executive-chart-card" style="margin-top: 12px;">
+              <h3>Classification History (Month / Year)</h3>
+              <div class="executive-history-toolbar">
+                <div class="executive-history-field"><label for="executive-year-filter" class="mono">Year</label><select id="executive-year-filter" class="artifact-filter-select" aria-label="Filter classification history by year"><option value="all">All Years</option></select></div>
+                <div class="executive-history-field"><label for="executive-month-filter" class="mono">Month</label><select id="executive-month-filter" class="artifact-filter-select" aria-label="Filter classification history by month"><option value="all">All Months</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+                <div class="executive-history-field"><label for="executive-classification-filter" class="mono">Classification</label><select id="executive-classification-filter" class="artifact-filter-select" aria-label="Filter classification history by incident classification"><option value="all">All</option><option value="true-positive">True Positive</option><option value="false-positive">False Positive</option><option value="benign">Benign</option></select></div>
+                <div class="executive-history-field executive-history-field-search"><label for="executive-history-search" class="mono">Search</label><input id="executive-history-search" class="artifact-filter-select artifact-filter-input" type="search" aria-label="Search classification history" placeholder="Search month or year" /></div>
+                <div class="executive-history-field executive-history-export-field"><label class="mono">Export</label><button type="button" id="classification-history-export" class="classification-history-export-btn" aria-label="Export filtered classification history to CSV">Export CSV</button></div>
+              </div>
+              <div class="executive-history-wrap">
+                <table class="executive-history-table" aria-label="Incident classification history by month and year">
+                  <thead><tr><th>Month / Year</th><th>Total</th><th>True Positive</th><th>False Positive</th><th>Benign</th></tr></thead>
+                  <tbody id="classification-history-body"><tr><td colspan="5" class="incident-empty">No incident history available.</td></tr></tbody>
+                </table>
+              </div>
+              <div id="classification-history-pagination" class="classification-history-pagination"></div>
+            </div>
+            <div class="executive-detail-grid" style="margin-top: 12px;">
+              <div class="executive-chart-card">
+                <h3>Top Actors</h3>
+                <div class="executive-history-wrap">
+                  <table class="executive-history-table" aria-label="Top actors table">
+                    <thead>
+                      <tr><th>Actor</th><th>Incidents</th><th>Last Seen</th></tr>
+                    </thead>
+                    <tbody id="executive-top-actors-body">
+                      <tr><td colspan="3" class="incident-empty">No actor data available.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="executive-top-actors-pagination" class="classification-history-pagination"></div>
+              </div>
+              <div class="executive-chart-card">
+                <h3>Top Departments</h3>
+                <div class="executive-history-wrap">
+                  <table class="executive-history-table" aria-label="Top departments table">
+                    <thead>
+                      <tr><th>Department</th><th>Incidents</th><th>Share</th></tr>
+                    </thead>
+                    <tbody id="executive-top-departments-body">
+                      <tr><td colspan="3" class="incident-empty">No department data available.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="executive-top-departments-pagination" class="classification-history-pagination"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="artifacts-tab-content" class="tab-content">
+          <div class="avp-card" style="grid-column: 1 / -1;">
+
+            <!-- Header -->
+            <div class="avp-header">
+              <div class="avp-header-left">
+                <h3 class="avp-title">Artifact Removal Validation</h3>
+                <span class="avp-subtitle mono">Review all files stored under artifacts/ and delete them only when the alert status is resolved.</span>
+              </div>
+              <div class="avp-summary-pills" id="avp-summary-pills" aria-label="Artifact removal summary"></div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="avp-toolbar">
+              <div class="avp-toolbar-left">
+                <select id="avp-search-field" class="avp-select" aria-label="Choose artifacts search field">
+                  <option value="all">All fields</option>
+                  <option value="incident">Incident</option>
+                </select>
+                <input id="artifacts-incident-filter" class="avp-search" type="search" aria-label="Search by alert name, incident ID, or artifact name" placeholder="Search alert name, incident ID, or artifact…" />
+                <select id="avp-status-filter" class="avp-select" aria-label="Filter by alert status">
+                  <option value="all">All alert statuses</option>
+                  <option value="resolved">Resolved / Closed</option>
+                  <option value="active">Active / Open</option>
+                  <option value="dismissed">Dismissed</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="avp-toolbar-right">
+                <button type="button" id="avp-export-btn" class="avp-action-btn">Export CSV</button>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="avp-table-wrap">
+              <table id="avp-artifacts-table" class="avp-table" aria-label="Artifact removal validation table">
+                <colgroup>
+                  <col style="width:36px" />
+                  <col />
+                  <col id="avp-alert-name-col" style="width:140px" />
+                  <col style="width:110px" />
+                  <col style="width:115px" />
+                  <col style="width:130px" />
+                  <col style="width:160px" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th class="avp-th-left">Artifact</th>
+                    <th>
+                      <button type="button" id="avp-alert-column-toggle" class="avp-column-toggle" aria-expanded="false">
+                        <span>Alert Name</span>
+                        <span id="avp-alert-column-toggle-hint" class="avp-column-toggle-hint">Expand column</span>
+                      </button>
+                    </th>
+                    <th>Incident ID</th>
+                    <th>Date Collected</th>
+                    <th>Alert Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="artifacts-by-incident-body">
+                  <tr><td colspan="7" class="incident-empty">Loading artifacts…</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <div class="card" style="grid-column: 1 / -1; margin-top: 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <h3 style="margin:0;">Purview Export</h3>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top: 10px;">
+              <small class="mono" id="downloaded-excel-status" style="color: var(--muted);">Checking for automation/latest_purview_export.xlsx ...</small>
+              <a id="downloaded-excel-link" class="btn btn-sm btn-outline-secondary" href="automation/latest_purview_export.xlsx" download>Download Excel Export</a>
+            </div>
+          </div>
+        </div>
+
+        <div id="monitoring-tab-content" class="tab-content">
+          <div class="card" style="grid-column: 1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <div>
+                <h3 style="margin:0;">Automation Monitoring</h3>
+                <small class="mono" style="color: var(--muted);">Dashboard-managed Python background processes and their latest state.</small>
+              </div>
+              <small id="monitoring-last-updated" class="mono" style="color: var(--muted);">Waiting for the automation backend.</small>
+            </div>
+            <div class="executive-history-wrap" style="margin-top: 12px;">
+              <table class="executive-history-table" aria-label="Background Python monitoring table">
+                <thead>
+                  <tr>
+                    <th>Python File</th>
+                    <th>Status</th>
+                    <th>PID</th>
+                    <th>Started</th>
+                    <th>Running Time</th>
+                    <th>Stopped</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="monitoring-process-body">
+                  <tr><td colspan="7" class="incident-empty">Loading monitoring status...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="selectors-tab-content" class="tab-content">
+          <div class="card sc-shell" style="grid-column: 1 / -1;">
+            <div class="sc-header">
+              <div class="sc-header-text">
+                <div class="sc-header-title">
+                  <span class="sc-header-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+                  </span>
+                  <h3>Selector Configuration</h3>
+                </div>
+                <p class="sc-header-sub mono">Define the page selectors the automation uses, separated by each portal link. Values are saved in this browser and can be exported as JSON for the Python backend.</p>
+              </div>
+              <span class="badge warn sc-header-badge">Automation</span>
+            </div>
+
+            <div class="sc-toolbar">
+              <div class="sc-search-wrap">
+                <svg class="sc-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="selector-config-search" class="sc-search" type="search" aria-label="Search selectors by portal, field, or value" placeholder="Search portal, field, or selector…" />
+              </div>
+              <div class="sc-toolbar-actions">
+                <button type="button" id="selector-config-expand-toggle" class="sc-btn sc-btn-ghost">Collapse all</button>
+                <span class="sc-toolbar-divider" aria-hidden="true"></span>
+                <button type="button" id="selector-config-add-portal" class="sc-btn sc-btn-ghost">+ Add portal</button>
+                <button type="button" id="selector-config-save-all" class="sc-btn sc-btn-primary">Save All</button>
+                <button type="button" id="selector-config-reset-all" class="sc-btn sc-btn-ghost">Reset</button>
+                <button type="button" id="selector-config-export" class="sc-btn sc-btn-ghost">Export JSON</button>
+                <button type="button" id="selector-config-import-btn" class="sc-btn sc-btn-ghost">Import JSON</button>
+                <input id="selector-config-import-file" type="file" accept="application/json,.json" hidden />
+              </div>
+            </div>
+
+            <div id="selector-config-stats" class="sc-stats" aria-label="Selector configuration summary"></div>
+            <div id="selector-config-nav" class="sc-nav" aria-label="Jump to portal"></div>
+            <div id="selector-config-feedback" class="mono sc-feedback">Loading selector configuration…</div>
+
+            <div id="selector-config-groups" class="sc-portals" aria-label="Selector configuration grouped by portal link">
+              <div class="incident-empty">Loading selector configuration…</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="settings-tab-content" class="tab-content">
+          <div class="settings-layout">
+            <div class="settings-existing-panel">
+              <div class="card" style="grid-column: 1 / -1;">
+                <h3>Appearance</h3>
+                <div class="settings-appearance-card">
+                  <div class="settings-item settings-theme-row">
+                    <div><div class="settings-label">Theme</div><small class="mono" style="color: var(--muted);">This will apply to your dashboard app.</small></div>
+                    <select id="settings-theme-select" class="artifact-filter-select" aria-label="Choose theme"><option value="system">Follow operating system theme</option><option value="light">Light</option><option value="dark">Dark</option><option value="classic">Classic</option><option value="high-contrast">High contrast</option></select>
+                  </div>
+                  <div class="settings-item settings-theme-row">
+                    <div><div class="settings-label">Font Size</div><small class="mono" style="color: var(--muted);">Adjust the base font size of the dashboard.</small></div>
+                    <select id="settings-fontsize-select" class="artifact-filter-select" aria-label="Choose font size">
+                      <option value="100">Default (100%)</option>
+                      <option value="105">105%</option>
+                      <option value="110">110%</option>
+                      <option value="115">115%</option>
+                      <option value="120">120%</option>
+                      <option value="125">125%</option>
+                      <option value="130">130%</option>
+                      <option value="135">135%</option>
+                      <option value="140">140%</option>
+                      <option value="145">145%</option>
+                      <option value="150">150%</option>
+                    </select>
+                  </div>
+                </div>
+                <h3 style="margin-top: 14px;">System</h3>
+                <div class="settings-grid">
+                  <div class="settings-item"><div><div class="settings-label">Auto Refresh</div><small class="mono" style="color: var(--muted);">Refresh case and artifacts every 25 seconds</small></div><span class="badge good">Enabled</span></div>
+                  <div class="settings-item"><div><div class="settings-label">Notifications</div><small class="mono" style="color: var(--muted);">Show in-app alerts for pipeline and resolve updates</small></div><span class="badge good">Enabled</span></div>
+                  <div class="settings-item"><div><div class="settings-label">Default Incident View</div><small class="mono" style="color: var(--muted);">Open incidents in modal</small></div><span class="badge warn">Modal</span></div>
+                  <div class="settings-item"><div><div class="settings-label">Retention</div><small class="mono" style="color: var(--muted);">Keep local incident comments and resolution notes for current session</small></div><span class="badge warn">Session</span></div>
+                  <div class="settings-item">
+                    <div><div class="settings-label">Time Zone</div><small class="mono" style="color: var(--muted);">Select your preferred time zone for incident timestamps</small></div>
+                    <select id="settings-timezone-select" class="artifact-filter-select" aria-label="Choose time zone">
+                      <option value="UTC">UTC (Coordinated Universal Time)</option>
+                      <option value="CET">CET (Central European Time)</option>
+                      <option value="EET">EET (Eastern European Time)</option>
+                      <option value="IST">IST (India Standard Time)</option>
+                      <option value="HKT">HKT (Hong Kong Time)</option>
+                      <option value="JST">JST (Japan Standard Time)</option>
+                      <option value="EST">EST (Eastern Standard Time)</option>
+                      <option value="CST">CST (Central Standard Time)</option>
+                      <option value="PST">PST (Pacific Standard Time)</option>
+                      <option value="PHT">PHT (Philippine Time)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card system-config-card">
+              <div class="system-config-header">
+                <div>
+                  <h3>System Configuration</h3>
+                  <div class="system-config-subtitle mono">Control manual automation actions and define automatic start and stop schedules.</div>
+                </div>
+                <span class="badge warn">Automation</span>
+              </div>
+
+              <div class="system-config-status-grid" aria-label="Automation status overview">
+                <div class="system-config-status-tile">
+                  <span class="mono">Current Status</span>
+                  <div class="system-config-status-inline">
+                    <span id="system-config-status-badge" class="badge warn">Stopped</span>
+                    <strong id="system-config-status-text">Stopped</strong>
+                  </div>
+                </div>
+                <div class="system-config-status-tile">
+                  <span class="mono">System State</span>
+                  <strong id="system-config-system-state">Stopped</strong>
+                </div>
+                <div class="system-config-status-tile">
+                  <span class="mono">Next Automatic Run</span>
+                  <strong id="system-config-next-run">Not scheduled</strong>
+                </div>
+                <div class="system-config-status-tile">
+                  <span class="mono">Next Automatic Termination</span>
+                  <strong id="system-config-next-stop">Not scheduled</strong>
+                </div>
+              </div>
+              <div id="system-config-feedback" class="mono system-config-feedback">Waiting for the automation backend.</div>
+
+              <div class="system-config-section">
+                <div class="system-config-section-title">Manual Controls</div>
+                <div class="system-config-button-row">
+                  <button type="button" id="run-automation-btn" class="avp-action-btn system-config-button system-config-button-run">Run Automation</button>
+                  <button type="button" id="terminate-automation-btn" class="avp-action-btn system-config-button system-config-button-stop">Terminate Automation</button>
+                </div>
+              </div>
+
+              <div class="system-config-section">
+                <div class="system-config-section-title">Scheduling</div>
+
+                <div class="system-config-schedule-card">
+                  <div class="system-config-schedule-head">
+                    <div>
+                      <div class="settings-label">Automatic Run</div>
+                      <small class="mono system-config-help">Configure when the automation should start automatically.</small>
+                    </div>
+                    <label class="system-config-toggle" for="auto-run-enabled" aria-label="Enable automatic run scheduling">
+                      <input id="auto-run-enabled" type="checkbox" />
+                      <span class="system-config-toggle-track"></span>
+                    </label>
+                  </div>
+                  <div class="system-config-schedule-fields">
+                    <label class="system-config-field">
+                      <span class="mono">Run Frequency</span>
+                      <select id="auto-run-frequency" class="artifact-filter-select system-config-input" aria-label="Automatic run frequency">
+                        <option value="daily">Daily</option>
+                        <option value="weekdays">Weekdays</option>
+                        <option value="weekly">Weekly</option>
+                      </select>
+                    </label>
+                    <label class="system-config-field">
+                      <span class="mono">Run Day</span>
+                      <select id="auto-run-day" class="artifact-filter-select system-config-input" aria-label="Automatic run day">
+                        <option value="monday">Monday</option>
+                        <option value="tuesday">Tuesday</option>
+                        <option value="wednesday">Wednesday</option>
+                        <option value="thursday">Thursday</option>
+                        <option value="friday">Friday</option>
+                        <option value="saturday">Saturday</option>
+                        <option value="sunday">Sunday</option>
+                      </select>
+                    </label>
+                    <label class="system-config-field">
+                      <span class="mono">Run Time</span>
+                      <input id="auto-run-time" class="system-config-input" type="time" aria-label="Automatic run time" value="08:00" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="system-config-schedule-card">
+                  <div class="system-config-schedule-head">
+                    <div>
+                      <div class="settings-label">Automatic Termination</div>
+                      <small class="mono system-config-help">Set when the automation should stop automatically.</small>
+                    </div>
+                    <label class="system-config-toggle" for="auto-stop-enabled" aria-label="Enable automatic termination scheduling">
+                      <input id="auto-stop-enabled" type="checkbox" />
+                      <span class="system-config-toggle-track"></span>
+                    </label>
+                  </div>
+                  <div class="system-config-schedule-fields">
+                    <label class="system-config-field">
+                      <span class="mono">Termination Frequency</span>
+                      <select id="auto-stop-frequency" class="artifact-filter-select system-config-input" aria-label="Automatic termination frequency">
+                        <option value="daily">Daily</option>
+                        <option value="weekdays">Weekdays</option>
+                        <option value="weekly">Weekly</option>
+                      </select>
+                    </label>
+                    <label class="system-config-field">
+                      <span class="mono">Termination Day</span>
+                      <select id="auto-stop-day" class="artifact-filter-select system-config-input" aria-label="Automatic termination day">
+                        <option value="monday">Monday</option>
+                        <option value="tuesday">Tuesday</option>
+                        <option value="wednesday">Wednesday</option>
+                        <option value="thursday">Thursday</option>
+                        <option value="friday">Friday</option>
+                        <option value="saturday">Saturday</option>
+                        <option value="sunday">Sunday</option>
+                      </select>
+                    </label>
+                    <label class="system-config-field">
+                      <span class="mono">Termination Time</span>
+                      <input id="auto-stop-time" class="system-config-input" type="time" aria-label="Automatic termination time" value="18:00" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="system-config-actions-bar">
+                  <button type="button" id="save-automation-schedule-btn" class="avp-action-btn system-config-button system-config-button-save">Save Schedule</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note"><div>Powered by <b>Red<span class="flagged-red">Flagged</span></b> automation • Evidence-first triage and validation</div><div class="mono">Last refresh: 2026-04-16 10:04 (GMT+8)</div></div>
+    </section>
+
+    <section class="panel console">
+      <div class="panel-header">
+        <div class="panel-title"><h2>Odin Summary</h2><span>Generated summary from workflow evidence and report data</span></div>
+        <div class="chips"><button type="button" id="open-modal-from-agent" class="chip good chip-button" aria-label="Open selected incident">Agent: Unassigned</button><div class="chip warn">Mode: Summary</div></div>
+      </div>
+      <div class="console-body">
+        <div id="odin-summary-console" class="odin-summary-box" style="min-height: 220px;" tabindex="0" role="region" aria-label="Odin summary content">Odin summary will appear here.</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;"><button type="button" id="consult-odin-from-summary" class="chip good chip-button" aria-label="Consult with Odin">Consult with Odin</button><button type="button" id="view-incident-from-odin" class="chip warn chip-button" aria-label="View incident details">View Incident</button><button type="button" id="resolve-incident-from-odin" class="chip good chip-button" aria-label="Resolve selected incident">Resolve</button></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/riskEngine.js"></script>
+  <script src="js/actionEngine.js"></script>
+  <script src="js/odinEngine.js"></script>
+  <script src="js/dbInfoData.js"></script>
+  <script src="js/artifactData.js"></script>
+  <script src="js/selectorConfig.js?v=20260625-selectors"></script>
+  <script src="js/script.js?v=20260602-monitoring-runtime"></script>
+</body>
+</html>

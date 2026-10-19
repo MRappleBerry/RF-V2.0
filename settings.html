@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedFlagged — Developer Config</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 228px;
+  --sidebar-bg: #0d1424;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: #8b9ab4;
+  --brand: #ef4444;
+  --blue: #3b82f6;
+  --blue-dark: #1d4ed8;
+  --navy: #0d1424;
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --border: #e4e9f0;
+  --text: #1a2236;
+  --text-muted: #64748b;
+  --text-sub: #94a3b8;
+  --radius: 10px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; min-height: 100vh; font-size: 13.5px; line-height: 1.5;
+}
+
+/* ─── Sidebar ────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  border-right: 1px solid var(--sidebar-border);
+}
+.sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--sidebar-border); }
+.logo-wrap { display: flex; align-items: center; gap: 11px; }
+.logo-box {
+  width: 34px; height: 34px; background: var(--brand); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(239,68,68,.4);
+}
+.logo-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.logo-tag  { font-size: 10px; color: var(--sidebar-text); text-transform: uppercase; letter-spacing: .6px; margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 14px 10px; }
+.nav-group-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .9px; color: rgba(139,154,180,.45); padding: 6px 12px 4px; margin-top: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px;
+  cursor: pointer; color: var(--sidebar-text); font-size: 13px; font-weight: 500;
+  transition: all .15s; margin-bottom: 2px; text-decoration: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.05); color: #cbd5e1; }
+.nav-item.active { background: rgba(59,130,246,.15); color: #60a5fa; font-weight: 600; }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; opacity: .85; }
+.nav-label { flex: 1; }
+.nav-chip {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 2px 6px; border-radius: 20px; background: rgba(139,154,180,.18); color: #8b9ab4;
+}
+.sidebar-footer { padding: 14px 20px; border-top: 1px solid var(--sidebar-border); }
+.live-row { display: flex; align-items: center; gap: 7px; }
+.live-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.live-text { font-size: 11px; color: var(--sidebar-text); }
+.footer-sub { font-size: 10px; color: var(--sidebar-text); margin-top: 3px; opacity: .7; }
+.sidebar-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sidebar-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); color:#fff; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sidebar-user-name { font-size:12px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-user-role { font-size:10px; color:var(--sidebar-text); text-transform:uppercase; letter-spacing:.5px; }
+.btn-signout { width:100%; padding:6px 10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#f87171; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; margin-bottom:10px; }
+.btn-signout:hover { background:rgba(239,68,68,.2); border-color:#f87171; }
+
+/* ─── Main ───────────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+.topbar {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 15px 28px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 50;
+}
+.page-title { font-size: 17px; font-weight: 700; }
+.page-sub   { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.content { padding: 28px; flex: 1; max-width: 820px; }
+
+/* ─── Config sections ────────────────────────────────────── */
+.cfg-section {
+  background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
+  box-shadow: var(--shadow); margin-bottom: 24px; overflow: hidden;
+}
+.cfg-head {
+  padding: 14px 20px; border-bottom: 1px solid var(--border); background: #1e293b;
+  display: flex; align-items: center; gap: 10px;
+}
+.cfg-head-icon { font-size: 18px; }
+.cfg-head-title { font-size: 13.5px; font-weight: 700; color: #f1f5f9; }
+.cfg-head-desc  { font-size: 11.5px; color: #94a3b8; margin-top: 1px; }
+.cfg-body { padding: 20px; }
+.cfg-row { margin-bottom: 18px; }
+.cfg-row:last-child { margin-bottom: 0; }
+.cfg-label {
+  display: block; font-size: 12px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px;
+}
+.cfg-label span { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-sub); margin-left: 4px; }
+.cfg-input {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 13px; font-size: 13.5px; color: var(--text); background: var(--bg);
+  outline: none; font-family: 'Consolas', monospace; transition: border-color .15s, box-shadow .15s;
+}
+.cfg-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.1); background: #fff; }
+.cfg-hint { font-size: 11.5px; color: var(--text-sub); margin-top: 5px; }
+.cfg-row-inline { display: flex; gap: 12px; }
+.cfg-row-inline .cfg-input { width: auto; flex: 1; }
+
+/* ─── Buttons ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--blue); color: #fff; border: none;
+  padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: background .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--blue-dark); }
+.btn:disabled { background: #94a3b8; cursor: not-allowed; }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg); color: var(--text-muted); border: 1px solid var(--border);
+  padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: all .15s; white-space: nowrap; text-decoration: none;
+}
+.btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+.btn-row { display: flex; gap: 10px; align-items: center; margin-top: 20px; flex-wrap: wrap; }
+.btn-save {
+  background: #16a34a; color: #fff; border: none;
+  padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700;
+  transition: background .15s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-save:hover { background: #15803d; }
+
+/* ─── Environment tabs ───────────────────────────────────── */
+.env-bar {
+  display: flex; align-items: center; gap: 0;
+  background: #1e293b; border-radius: var(--radius); overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08); margin-bottom: 24px;
+}
+.env-tab {
+  flex: 1; padding: 13px 20px; text-align: center; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: #64748b;
+  border: none; background: transparent; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.env-tab:hover { color: #94a3b8; }
+.env-tab.active { background: rgba(59,130,246,.18); color: #60a5fa; }
+.env-active-pill {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  background: #22c55e; color: #fff; padding: 1px 6px; border-radius: 10px;
+}
+.env-divider { width: 1px; background: rgba(255,255,255,.08); align-self: stretch; }
+.env-switch-bar {
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+  padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; font-size: 12.5px; color: #15803d;
+}
+
+/* ─── Status toast ───────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: #1e293b; color: #f1f5f9; padding: 12px 24px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s;
+  opacity: 0; z-index: 999; display: flex; align-items: center; gap: 10px;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.ok   { border-left: 4px solid #22c55e; }
+.toast.err  { border-left: 4px solid #ef4444; }
+.toast-icon { font-size: 16px; }
+
+/* ─── Permission chip ────────────────────────────────────── */
+.perm-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.perm-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+  background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;
+  font-family: 'Consolas', monospace;
+}
+.perm-chip.ok  { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.perm-chip.req { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+
+/* ─── Info box ───────────────────────────────────────────── */
+.info-box {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 12px 16px; font-size: 12.5px; color: #1d4ed8; margin-top: 16px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.info-box.warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+
+/* ─── Status pill ────────────────────────────────────────── */
+.test-result { margin-top: 10px; font-size: 12.5px; font-weight: 600; display: none; }
+.test-result.ok  { color: #15803d; }
+.test-result.err { color: #dc2626; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-wrap">
+      <div class="logo-box">🚩</div>
+      <div>
+        <div class="logo-name">RedFlagged</div>
+        <div class="logo-tag">Security Dashboard</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Monitoring</div>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">🚨</span>
+      <span class="nav-label">Incidents</span>
+    </a>
+    <a href="/report" class="nav-item">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Report</span>
+    </a>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Zscaler integration — deployment in progress">
+      <span class="nav-icon">🔒</span>
+      <span class="nav-label">Zscaler</span>
+      <span class="nav-chip">ON DEV</span>
+    </div>
+    <div class="nav-group-label" id="nav-group-system" style="margin-top:14px">System</div>
+    <a href="/assignment" class="nav-item" id="nav-assignment">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Assignment</span>
+    </a>
+    <a href="/system-config" class="nav-item" id="nav-system-config">
+      <span class="nav-icon">🛠️</span>
+      <span class="nav-label">System Configuration</span>
+    </a>
+    <a href="/settings" class="nav-item active" id="nav-dev-config">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Developer Config</span>
+    </a>
+    <a href="/#users" class="nav-item" id="nav-users">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">User Management</span>
+    </a>
+    <div class="nav-group-label" style="margin-top:14px">Tools</div>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Coming soon">
+      <span class="nav-icon">🏷️</span>
+      <span class="nav-label">Data Classification</span>
+      <span class="nav-chip">SOON</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUser" style="display:none">
+      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="sidebar-user-name" id="sidebarUserName"></div>
+        <div class="sidebar-user-role" id="sidebarUserRole"></div>
+      </div>
+    </div>
+    <button class="btn-signout" id="btnSignOut" style="display:none" onclick="signOut()">Sign out</button>
+    <div class="live-row"><div class="live-dot"></div><span class="live-text">Live · Graph API</span></div>
+    <div class="footer-sub" id="footerSub">Live</div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════ -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">⚙️ Developer Configuration</div>
+      <div class="page-sub">API credentials and system settings for RedFlagged deployment</div>
+    </div>
+    <a href="/" class="btn-ghost">← Back to Dashboard</a>
+  </div>
+
+  <div class="content">
+
+    <!-- Environment Selector -->
+    <div class="env-bar">
+      <button class="env-tab active" id="envTab-tenant" onclick="switchEnv('tenant')">
+        <span>🏢</span> Tenant (Dev)
+        <span class="env-active-pill" id="envPill-tenant" style="display:none">ACTIVE</span>
+      </button>
+      <div class="env-divider"></div>
+      <button class="env-tab" id="envTab-production" onclick="switchEnv('production')">
+        <span>🚀</span> Production
+        <span class="env-active-pill" id="envPill-production" style="display:none">ACTIVE</span>
+      </button>
+    </div>
+
+    <div class="env-switch-bar" id="envSwitchBar">
+      <div><strong id="envActiveLabel">Tenant (Dev)</strong> is the active environment — the server is currently using its credentials.</div>
+      <button class="btn" id="envActivateBtn" onclick="activateEnv()" style="padding:6px 16px;font-size:12px;display:none">Set as Active ↗</button>
+    </div>
+
+    <!-- Microsoft Azure App -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">☁️</span>
+        <div>
+          <div class="cfg-head-title">Microsoft Azure App Registration</div>
+          <div class="cfg-head-desc">Client credentials for Microsoft Graph API access (app-only, client credentials flow)</div>
+        </div>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <label class="cfg-label">Tenant ID <span>Azure Active Directory tenant GUID</span></label>
+          <input class="cfg-input" id="TENANT_ID" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        </div>
+        <div class="cfg-row">
+          <label class="cfg-label">Client ID <span>Application (client) ID from Azure Portal</span></label>
+          <input class="cfg-input" id="CLIENT_ID" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        </div>
+        <div class="cfg-row">
+          <label class="cfg-label">Client Secret <span>App registration secret value (not secret ID)</span></label>
+          <input class="cfg-input" id="CLIENT_SECRET" type="password" placeholder="Enter client secret…" autocomplete="new-password">
+          <div class="cfg-hint">Leave blank to keep the existing secret. Stored locally in config.json.</div>
+        </div>
+
+        <div class="info-box">
+          <span>ℹ️</span>
+          <div>
+            <strong>Required API permissions</strong> (Application, with admin consent):
+            <div class="perm-grid" style="margin-top:8px">
+              <span class="perm-chip ok">✓ SecurityAlert.Read.All</span>
+              <span class="perm-chip ok">✓ SecurityIncident.Read.All</span>
+              <span class="perm-chip ok">✓ Mail.Read</span>
+              <span class="perm-chip ok">✓ User.Read.All</span>
+              <span class="perm-chip req">⚠ InformationProtectionPolicy.Read.All</span>
+              <span class="perm-chip req">⚠ Files.Read.All</span>
+            </div>
+            <div style="margin-top:8px;font-size:11.5px">⚠ = assigned but may need admin consent for full classifier/SharePoint support.</div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="testGraph()">🔌 Test Graph Connection</button>
+          <div class="test-result" id="graphTestResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Integration -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">🤖</span>
+        <div>
+          <div class="cfg-head-title">AI Integration — Anthropic Claude</div>
+          <div class="cfg-head-desc">Powers the AI chat analyst and investigation summaries</div>
+        </div>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <label class="cfg-label">Anthropic API Key <span>sk-ant-… from console.anthropic.com</span></label>
+          <input class="cfg-input" id="ANTHROPIC_API_KEY" type="password" placeholder="sk-ant-api03-…" autocomplete="new-password">
+          <div class="cfg-hint">Used by the 💬 AI Chat button and Report tab summary. Leave blank to keep existing key.</div>
+        </div>
+
+        <div class="info-box">
+          <span>ℹ️</span>
+          <div>The AI analyst uses <strong>claude-sonnet-4-6</strong> and is aware of the current alert's severity,
+          workload, DLP policy, detected sensitive info types, and email evidence.
+          API calls are made server-side — your key is never sent to the browser.</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="testAnthropicKey()">🔌 Test API Key</button>
+          <div class="test-result" id="anthropicTestResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ServiceNow Integration -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">🎫</span>
+        <div>
+          <div class="cfg-head-title">ServiceNow Integration</div>
+          <div class="cfg-head-desc">Automatically creates ServiceNow incidents for new Microsoft Defender alerts</div>
+        </div>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <label class="cfg-label">ServiceNow Instance <span>e.g. accenture.service-now.com</span></label>
+          <input class="cfg-input" id="SNOW_INSTANCE" type="text" placeholder="yourcompany.service-now.com" autocomplete="off">
+          <div class="cfg-hint">Hostname only — no https://. Leave blank to disable auto-ticket creation.</div>
+        </div>
+        <div class="cfg-row">
+          <label class="cfg-label">ServiceNow Username</label>
+          <input class="cfg-input" id="SNOW_USER" type="text" placeholder="svc-redflagged" autocomplete="off">
+        </div>
+        <div class="cfg-row">
+          <label class="cfg-label">ServiceNow Password</label>
+          <input class="cfg-input" id="SNOW_PASSWORD" type="password" placeholder="••••••••" autocomplete="new-password">
+          <div class="cfg-hint">Use a dedicated service account. Password is stored in config.json on the server.</div>
+        </div>
+        <div class="cfg-row">
+          <label class="cfg-label">ServiceNow Base URL <span>for clickable ticket links (optional)</span></label>
+          <input class="cfg-input" id="SNOW_URL" type="text" placeholder="https://accenture.service-now.com" autocomplete="off">
+          <div class="cfg-hint">Full URL used to generate clickable ticket links in the Overview tab.</div>
+        </div>
+
+        <div class="info-box">
+          <span>ℹ️</span>
+          <div>When configured, a ServiceNow Incident is automatically created for each new Microsoft Defender incident on the next data refresh.
+          Incidents <strong>merged into an Exfiltration incident</strong> are skipped automatically.
+          Duplicate tickets are prevented — each Defender incident maps to at most one ServiceNow ticket.</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="testSnowConnection()">🔌 Test Connection</button>
+          <div class="test-result" id="snowTestResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Microsoft Teams Notifications -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">💬</span>
+        <div>
+          <div class="cfg-head-title">Microsoft Teams Notifications</div>
+          <div class="cfg-head-desc">Post an Adaptive Card to a Teams channel when a new DLP incident is detected</div>
+        </div>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <label class="cfg-label">Teams Webhook URL <span>Incoming Webhook or Power Automate Workflow URL</span></label>
+          <input class="cfg-input" id="TEAMS_WEBHOOK_URL" type="text" placeholder="https://prod-xx.region.logic.azure.com/workflows/…" autocomplete="off">
+          <div class="cfg-hint">
+            In Teams: open a channel → <strong>…</strong> → <strong>Workflows</strong> → <em>Post to a channel when a webhook request is received</em>. Paste the generated URL here.
+            Leave blank to disable notifications.
+          </div>
+        </div>
+
+        <div class="info-box">
+          <span>ℹ️</span>
+          <div>When configured, RedFlagged will post an Adaptive Card to this Teams channel each time a <strong>new Microsoft Defender incident</strong> is detected on data refresh. The card shows incident title, severity, category, detection time, and a link to the dashboard.</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="testTeamsWebhook()">📨 Send Test Notification</button>
+          <div class="test-result" id="teamsTestResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server Settings -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">🖥</span>
+        <div>
+          <div class="cfg-head-title">Server Settings</div>
+          <div class="cfg-head-desc">Flask server and caching configuration</div>
+        </div>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row cfg-row-inline">
+          <div style="flex:1">
+            <label class="cfg-label">Server Port <span>default: 5050</span></label>
+            <input class="cfg-input" id="PORT" type="number" placeholder="5050" min="1024" max="65535">
+            <div class="cfg-hint">Requires server restart to take effect.</div>
+          </div>
+          <div style="flex:1">
+            <label class="cfg-label">Cache TTL <span>seconds · default: 60</span></label>
+            <input class="cfg-input" id="CACHE_TTL" type="number" placeholder="60" min="10" max="3600">
+            <div class="cfg-hint">How often to refresh data from Graph API.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deployment Notes -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">🚀</span>
+        <div>
+          <div class="cfg-head-title">Production Deployment Notes</div>
+          <div class="cfg-head-desc">Checklist for deploying RedFlagged in a production environment</div>
+        </div>
+      </div>
+      <div class="cfg-body" style="font-size:13px;color:var(--text-muted);line-height:1.9">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div style="font-weight:700;color:var(--text);margin-bottom:6px">Security</div>
+            <div>☐ Move secrets to Azure Key Vault or environment variables</div>
+            <div>☐ Enable HTTPS (reverse proxy: Nginx / Azure App Service)</div>
+            <div>☐ Restrict network access — internal IP range or VPN only</div>
+            <div>☐ Enable Azure AD authentication (MSAL) for dashboard login</div>
+            <div>☐ Remove debug=True from server.py</div>
+          </div>
+          <div>
+            <div style="font-weight:700;color:var(--text);margin-bottom:6px">Infrastructure</div>
+            <div>☐ Run with gunicorn: <code style="font-family:Consolas;font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:3px">gunicorn server:app -w 2</code></div>
+            <div>☐ Use a process manager (systemd / PM2 / Docker)</div>
+            <div>☐ Replace in-memory cache with Redis for multi-worker support</div>
+            <div>☐ Set up log rotation and monitoring</div>
+            <div>☐ Configure auto-restart on failure</div>
+          </div>
+        </div>
+        <div class="info-box warn" style="margin-top:16px">
+          <span>⚠️</span>
+          <div><strong>config.json stores credentials in plaintext.</strong> For production, use environment variables
+          (<code style="font-family:Consolas;font-size:11px">TENANT_ID</code>, <code style="font-family:Consolas;font-size:11px">CLIENT_SECRET</code>, etc.)
+          and remove config.json from the deployment or add it to .gitignore.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save button -->
+    <div class="btn-row">
+      <button class="btn-save" onclick="saveConfig()">💾 Save Configuration</button>
+      <div class="test-result" id="saveResult" style="display:inline-block"></div>
+    </div>
+    <div style="height:40px"></div>
+  </div>
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+function showToast(msg, ok) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = ok ? '✅' : '❌';
+  t.className = 'toast show ' + (ok ? 'ok' : 'err');
+  setTimeout(function() { t.className = 'toast'; }, 3800);
+}
+
+function setTestResult(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'test-result ' + (ok ? 'ok' : 'err');
+  el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+}
+
+// ── Environment state ──────────────────────────────────────
+let currentEnv = 'tenant';
+let activeEnv  = 'tenant';
+let allEnvs    = {};
+
+const ENV_LABELS = { tenant: 'Tenant (Dev)', production: 'Production' };
+
+function switchEnv(env) {
+  currentEnv = env;
+  // Update tabs
+  ['tenant','production'].forEach(function(e) {
+    document.getElementById('envTab-' + e).classList.toggle('active', e === env);
+  });
+  // Update switch bar
+  const isActive = env === activeEnv;
+  const bar = document.getElementById('envSwitchBar');
+  if (isActive) {
+    bar.style.background = '#f0fdf4'; bar.style.borderColor = '#bbf7d0'; bar.style.color = '#15803d';
+    bar.innerHTML = '<div><strong>' + ENV_LABELS[env] + '</strong> is the active environment — the server is currently using its credentials.</div>' +
+      '<button class="btn" id="envActivateBtn" onclick="activateEnv()" style="padding:6px 16px;font-size:12px;display:none">Set as Active ↗</button>';
+  } else {
+    bar.style.background = '#fffbeb'; bar.style.borderColor = '#fde68a'; bar.style.color = '#92400e';
+    bar.innerHTML = '<div>Viewing <strong>' + ENV_LABELS[env] + '</strong> — currently <em>not active</em>. Save credentials, then click Set as Active to switch.</div>' +
+      '<button class="btn" onclick="activateEnv()" style="padding:6px 16px;font-size:12px;background:#f59e0b">Set as Active ↗</button>';
+  }
+  // Populate fields from cached env data
+  populateFields(allEnvs[env] || {});
+}
+
+function populateFields(c) {
+  const fields = ['TENANT_ID','CLIENT_ID','PORT','CACHE_TTL','SNOW_INSTANCE','SNOW_USER','SNOW_URL','TEAMS_WEBHOOK_URL'];
+  fields.forEach(function(f) {
+    const el = document.getElementById(f);
+    if (el) el.value = c[f] || '';
+  });
+  document.getElementById('CLIENT_SECRET').value = '';
+  document.getElementById('CLIENT_SECRET').placeholder = c.CLIENT_SECRET ? 'Saved (masked) — enter to change' : 'Enter client secret…';
+  document.getElementById('ANTHROPIC_API_KEY').value = '';
+  document.getElementById('ANTHROPIC_API_KEY').placeholder = c.ANTHROPIC_API_KEY ? 'Saved (masked) — enter to change' : 'sk-ant-api03-…';
+  document.getElementById('SNOW_PASSWORD').value = '';
+  document.getElementById('SNOW_PASSWORD').placeholder = c.SNOW_PASSWORD ? 'Saved (masked) — enter to change' : '••••••••';
+}
+
+// Load current config on page load
+window.addEventListener('DOMContentLoaded', async function() {
+  try {
+    const d = await fetch('/api/config').then(function(r){ return r.json(); });
+    if (d.ok) {
+      activeEnv  = d.active_env || 'tenant';
+      currentEnv = activeEnv;
+      allEnvs    = d.envs || {};
+      // Show active pill
+      ['tenant','production'].forEach(function(e) {
+        const pill = document.getElementById('envPill-' + e);
+        if (pill) pill.style.display = e === activeEnv ? 'inline' : 'none';
+      });
+      switchEnv(activeEnv);
+    }
+  } catch(e) { /* server might not have config yet */ }
+});
+
+async function saveConfig() {
+  const body = { env: currentEnv };
+  const fields = ['TENANT_ID','CLIENT_ID','CLIENT_SECRET','ANTHROPIC_API_KEY','PORT','CACHE_TTL',
+                  'SNOW_INSTANCE','SNOW_USER','SNOW_PASSWORD','SNOW_URL','TEAMS_WEBHOOK_URL'];
+  fields.forEach(function(f) {
+    const v = document.getElementById(f).value.trim();
+    if (v) body[f] = v;
+  });
+  try {
+    const d = await fetch('/api/config', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); });
+    if (d.ok) {
+      showToast(d.message, true);
+      // Reload env data
+      const r2 = await fetch('/api/config').then(function(r){ return r.json(); });
+      if (r2.ok) { allEnvs = r2.envs || {}; switchEnv(currentEnv); }
+      document.getElementById('CLIENT_SECRET').value = '';
+      document.getElementById('ANTHROPIC_API_KEY').value = '';
+      document.getElementById('SNOW_PASSWORD').value = '';
+    } else {
+      showToast(d.error || 'Save failed.', false);
+    }
+  } catch(e) { showToast('Network error: ' + e.message, false); }
+}
+
+async function testTeamsWebhook() {
+  const url = document.getElementById('TEAMS_WEBHOOK_URL').value.trim();
+  if (!url) {
+    setTestResult('teamsTestResult', 'Enter the webhook URL first.', false);
+    return;
+  }
+  setTestResult('teamsTestResult', 'Sending test notification…', true);
+  try {
+    const d = await fetch('/api/config/test-teams', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ TEAMS_WEBHOOK_URL: url })
+    }).then(function(r){ return r.json(); });
+    setTestResult('teamsTestResult', d.message || (d.ok ? 'Sent.' : 'Failed.'), d.ok);
+    showToast(d.message || (d.ok ? 'Teams test sent.' : 'Test failed.'), d.ok);
+  } catch(e) { setTestResult('teamsTestResult', 'Network error: ' + e.message, false); }
+}
+
+async function testSnowConnection() {
+  const instance = document.getElementById('SNOW_INSTANCE').value.trim();
+  const user     = document.getElementById('SNOW_USER').value.trim();
+  const pass     = document.getElementById('SNOW_PASSWORD').value.trim();
+  if (!instance || !user) {
+    setTestResult('snowTestResult', 'Enter instance and username first.', false);
+    return;
+  }
+  setTestResult('snowTestResult', 'Testing…', true);
+  document.getElementById('snowTestResult').className = 'test-result';
+  document.getElementById('snowTestResult').style.display = 'block';
+  try {
+    const base = instance.startsWith('http') ? instance : 'https://' + instance;
+    const d = await fetch('/api/snow-test', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ instance: base, user, password: pass })
+    }).then(function(r){ return r.json(); });
+    const ok = d.ok;
+    setTestResult('snowTestResult', ok ? 'Connected to ServiceNow successfully.' : (d.message || d.error || 'Connection failed.'), ok);
+    showToast(ok ? 'ServiceNow connection OK.' : (d.message || d.error || 'Connection failed.'), ok);
+  } catch(e) { setTestResult('snowTestResult', 'Network error: ' + e.message, false); }
+}
+
+async function activateEnv() {
+  try {
+    const d = await fetch('/api/config/switch-env', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ env: currentEnv })
+    }).then(function(r){ return r.json(); });
+    if (d.ok) {
+      activeEnv = currentEnv;
+      ['tenant','production'].forEach(function(e) {
+        const pill = document.getElementById('envPill-' + e);
+        if (pill) pill.style.display = e === activeEnv ? 'inline' : 'none';
+      });
+      switchEnv(currentEnv);
+      showToast(d.message, true);
+    } else {
+      showToast(d.error || 'Switch failed.', false);
+    }
+  } catch(e) { showToast('Network error: ' + e.message, false); }
+}
+
+async function testGraph() {
+  const body = {
+    TENANT_ID:     document.getElementById('TENANT_ID').value.trim(),
+    CLIENT_ID:     document.getElementById('CLIENT_ID').value.trim(),
+    CLIENT_SECRET: document.getElementById('CLIENT_SECRET').value.trim(),
+  };
+  setTestResult('graphTestResult', 'Testing…', true);
+  document.getElementById('graphTestResult').className = 'test-result';
+  document.getElementById('graphTestResult').style.display = 'block';
+  try {
+    const d = await fetch('/api/config/test-graph', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); });
+    setTestResult('graphTestResult', d.message, d.ok);
+    showToast(d.message, d.ok);
+  } catch(e) { setTestResult('graphTestResult', 'Network error: ' + e.message, false); }
+}
+
+async function testAnthropicKey() {
+  const key = document.getElementById('ANTHROPIC_API_KEY').value.trim();
+  setTestResult('anthropicTestResult', 'Testing…', true);
+  document.getElementById('anthropicTestResult').className = 'test-result';
+  document.getElementById('anthropicTestResult').style.display = 'block';
+  try {
+    const d = await fetch('/api/ai-chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        question: 'Respond with exactly: API key is valid.',
+        context: {},
+        history: [],
+        _test_key: key
+      })
+    }).then(function(r){ return r.json(); });
+    const ok = d.ok && d.answer;
+    setTestResult('anthropicTestResult', ok ? 'API key is valid and working.' : (d.error || 'Test failed.'), ok);
+    showToast(ok ? 'Anthropic API key is working.' : d.error, ok);
+  } catch(e) { setTestResult('anthropicTestResult', 'Network error: ' + e.message, false); }
+}
+
+// ── Auth ───────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (resp.status === 401) { window.location.href = '/login'; return false; }
+    const d = await resp.json();
+    if (!d.ok) { window.location.href = '/login'; return false; }
+    if (d.user.role !== 'developer') { window.location.href = '/'; return false; }
+    _applyUserUI(d.user);
+    document.body.style.visibility = '';
+    return true;
+  } catch (_) { window.location.href = '/login'; return false; }
+}
+function _applyUserUI(user) {
+  const initials = (user.display_name || user.email || '?').trim().charAt(0).toUpperCase();
+  document.getElementById('sidebarAvatar').textContent   = initials;
+  document.getElementById('sidebarUserName').textContent = user.display_name || user.email;
+  document.getElementById('sidebarUserRole').textContent = user.role;
+  document.getElementById('sidebarUser').style.display   = '';
+  document.getElementById('btnSignOut').style.display    = '';
+}
+async function signOut() {
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: '{}' }); } catch (_) {}
+  window.location.href = '/login';
+}
+
+(async function boot() { await checkAuth(); }());
+</script>
+</body>
+</html>

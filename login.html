@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedFlagged | Sign In</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 2.5rem 2.25rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+      text-align: center;
+    }
+
+    .logo { font-size: 2.75rem; line-height: 1; margin-bottom: 0.5rem; }
+
+    .app-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #f1f5f9;
+    }
+
+    .app-sub {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .divider {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #334155;
+    }
+
+    .btn-ms {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 0.75rem 1.25rem;
+      background: #fff;
+      color: #1e293b;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, box-shadow 0.15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+
+    .btn-ms:hover {
+      background: #f1f5f9;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+
+    .ms-logo {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .error-box {
+      display: none;
+      background: rgba(248,113,113,.12);
+      border: 1px solid #f87171;
+      border-radius: 8px;
+      color: #f87171;
+      font-size: 0.875rem;
+      padding: 0.75rem 1rem;
+      margin-top: 1.25rem;
+      text-align: center;
+    }
+
+    .error-box.visible { display: block; }
+
+    .footer-note {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 1.75rem;
+    }
+
+    .local-divider {
+      font-size: 0.75rem;
+      color: #475569;
+      margin: 1.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .local-divider::before, .local-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #334155;
+    }
+
+    .local-form { text-align: left; }
+
+    .field-label {
+      display: block;
+      font-size: 0.8125rem;
+      color: #94a3b8;
+      margin-bottom: 0.375rem;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 0.625rem 0.75rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-size: 0.9375rem;
+      margin-bottom: 1rem;
+    }
+    .field-input:focus {
+      outline: none;
+      border-color: #64748b;
+    }
+
+    .btn-local {
+      width: 100%;
+      padding: 0.75rem 1.25rem;
+      background: #334155;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-local:hover { background: #3f4f69; }
+    .btn-local:disabled { opacity: 0.6; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🚩</div>
+    <div class="app-name">RedFlagged</div>
+    <div class="app-sub">Security Incident Dashboard</div>
+
+    <div class="divider">Sign in with your organization account</div>
+
+    <a class="btn-ms" href="/auth/microsoft">
+      <!-- Microsoft logo SVG -->
+      <svg class="ms-logo" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Sign in with Microsoft
+    </a>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="local-divider">or sign in locally</div>
+
+    <form class="local-form" id="localLoginForm">
+      <label class="field-label" for="email">Email</label>
+      <input class="field-input" type="email" id="email" name="email" autocomplete="username" required />
+
+      <label class="field-label" for="password">Password</label>
+      <input class="field-input" type="password" id="password" name="password" autocomplete="current-password" required />
+
+      <button class="btn-local" type="submit" id="localSubmit">Sign in</button>
+    </form>
+
+    <div class="footer-note">
+      Use your Accenture or organization Microsoft account
+    </div>
+  </div>
+
+  <script>
+    // Show error from query string (e.g. ?error=access_denied)
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var err = params.get("error");
+      if (err) {
+        var box = document.getElementById("errorBox");
+        var msgs = {
+          "access_denied":  "Access denied — your account is not authorized.",
+          "no_email":       "Could not retrieve your email from Microsoft. Contact your administrator.",
+          "oauth_failed":   "Sign-in failed. Please try again.",
+        };
+        box.textContent = msgs[err] || decodeURIComponent(err);
+        box.classList.add("visible");
+      }
+    })();
+
+    // Local JSON auth login
+    document.getElementById("localLoginForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var box = document.getElementById("errorBox");
+      var submitBtn = document.getElementById("localSubmit");
+      box.classList.remove("visible");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Signing in…";
+      try {
+        var res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (res.ok && data.ok) {
+          window.location.href = "/dashboard";
+          return;
+        }
+        box.textContent = data.message || "Invalid email or password.";
+        box.classList.add("visible");
+      } catch (err) {
+        box.textContent = "Could not reach the server. Please try again.";
+        box.classList.add("visible");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Sign in";
+      }
+    });
+  </script>
+</body>
+</html>

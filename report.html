@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedFlagged — Incident Report</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 228px;
+  --sidebar-bg: #0d1424;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: #8b9ab4;
+  --brand: #ef4444;
+  --blue: #3b82f6;
+  --blue-light: #eff6ff;
+  --green: #16a34a;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-sub: #94a3b8;
+  --radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 6px rgba(0,0,0,0.05), 0 10px 15px rgba(0,0,0,0.04);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; min-height: 100vh; font-size: 13px; line-height: 1.5;
+}
+
+/* ─── Sidebar ────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  border-right: 1px solid var(--sidebar-border);
+}
+.sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--sidebar-border); }
+.logo-wrap { display: flex; align-items: center; gap: 11px; }
+.logo-box {
+  width: 34px; height: 34px; background: var(--brand); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(239,68,68,.4);
+}
+.logo-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.logo-tag  { font-size: 10px; color: var(--sidebar-text); text-transform: uppercase; letter-spacing: .6px; margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 14px 10px; }
+.nav-group-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .9px; color: rgba(139,154,180,.4); padding: 6px 12px 4px; margin-top: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px;
+  color: var(--sidebar-text); font-size: 13px; font-weight: 500;
+  transition: all .15s; margin-bottom: 2px; text-decoration: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.05); color: #cbd5e1; }
+.nav-item.active { background: rgba(59,130,246,.15); color: #60a5fa; font-weight: 600; }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; opacity: .85; }
+.nav-label { flex: 1; }
+.nav-chip { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 2px 6px; border-radius: 20px; background: rgba(139,154,180,.18); color: #8b9ab4; }
+.sidebar-footer { padding: 14px 16px; border-top: 1px solid var(--sidebar-border); }
+.live-row { display: flex; align-items: center; gap: 7px; }
+.live-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+.live-text { font-size: 11px; color: var(--sidebar-text); }
+.footer-sub { font-size: 10px; color: var(--sidebar-text); margin-top: 3px; opacity: .7; }
+.sidebar-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sidebar-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); color:#fff; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sidebar-user-name { font-size:12px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-user-role { font-size:10px; color:var(--sidebar-text); text-transform:uppercase; letter-spacing:.5px; }
+.btn-signout { width:100%; padding:6px 10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#f87171; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; margin-bottom:10px; }
+.btn-signout:hover { background:rgba(239,68,68,.2); border-color:#f87171; }
+
+/* ─── Main layout ────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* ─── Topbar ─────────────────────────────────────────────── */
+.topbar {
+  background: var(--sidebar-bg);
+  padding: 18px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  position: sticky; top: 0; z-index: 50; flex-wrap: wrap;
+}
+.topbar-left {}
+.topbar-title {
+  font-size: 19px; font-weight: 700; color: #f1f5f9;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar-title-icon {
+  width: 34px; height: 34px; background: rgba(59,130,246,.2); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+}
+.topbar-sub { font-size: 12px; color: #64748b; margin-top: 3px; padding-left: 44px; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; color: #94a3b8;
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-outline:hover { border-color: rgba(255,255,255,.28); color: #f1f5f9; }
+.btn-outline:disabled { opacity: .4; cursor: not-allowed; }
+.btn-export {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--green); color: #fff; border: none;
+  padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700;
+  transition: background .15s; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(22,163,74,.35);
+}
+.btn-export:hover { background: #15803d; }
+.btn-export:disabled { background: #6b7280; box-shadow: none; cursor: not-allowed; }
+
+/* ─── Stats strip ────────────────────────────────────────── */
+.stats-strip {
+  background: var(--sidebar-bg); border-bottom: 1px solid rgba(255,255,255,.07);
+  padding: 0 28px;
+  display: flex; gap: 0;
+}
+.stat-item {
+  padding: 14px 32px 14px 0; display: flex; flex-direction: column; gap: 3px;
+  border-right: 1px solid rgba(255,255,255,.06); margin-right: 32px;
+}
+.stat-item:last-child { border-right: none; }
+.stat-val { font-size: 22px; font-weight: 700; color: #f1f5f9; line-height: 1; }
+.stat-lbl { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: .6px; }
+
+/* ─── Content area ───────────────────────────────────────── */
+.content { padding: 22px 28px; flex: 1; display: flex; flex-direction: column; gap: 0; }
+
+/* ─── Table card ─────────────────────────────────────────── */
+.tbl-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  flex: 1;
+}
+.tbl-card-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.tbl-card-title { font-size: 13.5px; font-weight: 700; }
+.tbl-card-sub   { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+.legend { display: flex; align-items: center; gap: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.swatch-auto   { background: #bfdbfe; border: 1px solid #93c5fd; }
+.swatch-manual { background: #fde68a; border: 1px solid #fbbf24; }
+
+/* ─── Table ──────────────────────────────────────────────── */
+.tbl-scroll { overflow: auto; flex: 1; }
+
+table.rpt {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 12px;
+}
+
+table.rpt thead tr th {
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-right: 1px solid rgba(255,255,255,.06);
+  border-bottom: 2px solid #334155;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+table.rpt thead tr th.col-num {
+  position: sticky; left: 0; z-index: 4;
+  background: #0f172a; color: #475569;
+  width: 44px; min-width: 44px; text-align: center;
+}
+table.rpt thead tr th:hover { color: #f1f5f9; }
+
+table.rpt tbody tr { transition: background .08s; }
+table.rpt tbody tr:hover td { filter: brightness(.955); }
+
+table.rpt tbody td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  vertical-align: middle;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+table.rpt tbody td.col-num {
+  position: sticky; left: 0; z-index: 1;
+  background: #f8fafc;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  border-right: 2px solid #e2e8f0;
+  width: 44px; min-width: 44px;
+}
+
+td.auto   { background: #eff6ff; color: #1e3a5f; }
+td.auto-alt { background: #e8f2ff; color: #1e3a5f; }
+
+td.manual { background: #fffbeb; }
+td.manual-alt { background: #fef9c3; }
+
+/* Pending-resolution state for manual cells */
+td.pending { background: #f8fafc; }
+td.pending-alt { background: #f1f5f9; }
+.pending-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 600; color: #94a3b8;
+  background: #e2e8f0; border-radius: 20px;
+  padding: 2px 9px; white-space: nowrap; letter-spacing: .2px;
+}
+.pending-chip.needs-input {
+  background: #fef3c7; color: #b45309;
+}
+
+td.manual input, td.manual-alt input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 12px;
+  font-family: inherit;
+  color: #78350f;
+  outline: none;
+  min-width: 130px;
+  cursor: text;
+}
+td.manual input::placeholder, td.manual-alt input::placeholder {
+  color: #d97706; opacity: .55; font-style: italic;
+}
+td.manual input:focus, td.manual-alt input:focus {
+  background: #fef08a;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  width: calc(100% + 8px);
+}
+
+/* ─── Filter bar ─────────────────────────────────────────── */
+.filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filter-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+.filter-select {
+  appearance: none;
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2364748b' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") no-repeat right 10px center;
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px 28px 6px 11px; font-size: 12.5px; font-weight: 600; color: var(--text);
+  cursor: pointer; outline: none; min-width: 160px; transition: border-color .15s;
+}
+.filter-select:hover, .filter-select:focus { border-color: var(--blue); }
+.filter-count {
+  font-size: 11.5px; color: var(--text-muted); font-weight: 500;
+  background: #f1f5f9; border: 1px solid var(--border); border-radius: 20px;
+  padding: 3px 10px; white-space: nowrap;
+}
+
+.empty-row td { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+.loading-row td { text-align: center; padding: 60px 20px; }
+.spinner {
+  display: inline-block; width: 20px; height: 20px;
+  border: 3px solid #e2e8f0; border-top-color: var(--blue);
+  border-radius: 50%; animation: spin .7s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Toast ──────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: #1e293b; color: #f1f5f9;
+  padding: 13px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  transform: translateY(20px); opacity: 0;
+  transition: transform .25s, opacity .25s;
+  z-index: 999; display: flex; align-items: center; gap: 10px;
+  max-width: 360px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.ok  { border-left: 4px solid #22c55e; }
+.toast.err { border-left: 4px solid #ef4444; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-corner { background: transparent; }
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-wrap">
+      <div class="logo-box">🚩</div>
+      <div>
+        <div class="logo-name">RedFlagged</div>
+        <div class="logo-tag">Security Dashboard</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Monitoring</div>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">🚨</span>
+      <span class="nav-label">Incidents</span>
+    </a>
+    <a href="/report" class="nav-item active">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Report</span>
+    </a>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Zscaler integration — deployment in progress">
+      <span class="nav-icon">🔒</span>
+      <span class="nav-label">Zscaler</span>
+      <span class="nav-chip">ON DEV</span>
+    </div>
+    <div class="nav-group-label" id="nav-group-system" style="margin-top:14px">System</div>
+    <a href="/assignment" class="nav-item" id="nav-assignment">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Assignment</span>
+    </a>
+    <a href="/system-config" class="nav-item" id="nav-system-config">
+      <span class="nav-icon">🛠️</span>
+      <span class="nav-label">System Configuration</span>
+    </a>
+    <a href="/settings" class="nav-item" id="nav-dev-config">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Developer Config</span>
+    </a>
+    <a href="/#users" class="nav-item" id="nav-users">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">User Management</span>
+    </a>
+    <div class="nav-group-label" style="margin-top:14px">Tools</div>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Coming soon">
+      <span class="nav-icon">🏷️</span>
+      <span class="nav-label">Data Classification</span>
+      <span class="nav-chip">SOON</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUser" style="display:none">
+      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="sidebar-user-name" id="sidebarUserName"></div>
+        <div class="sidebar-user-role" id="sidebarUserRole"></div>
+      </div>
+    </div>
+    <button class="btn-signout" id="btnSignOut" style="display:none" onclick="signOut()">Sign out</button>
+    <div class="live-row"><div class="live-dot"></div><span class="live-text">Live · Graph API</span></div>
+    <div class="footer-sub" id="footerSub">Live</div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">
+        <div class="topbar-title-icon">📊</div>
+        DLP Incident Report
+      </div>
+      <div class="topbar-sub" id="reportMeta">Loading data…</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline" onclick="loadReport()" id="refreshBtn">↻ Refresh</button>
+      <button class="btn-export" onclick="exportExcel()" id="exportBtn">⬇ Export to Excel</button>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stat-item">
+      <div class="stat-val" id="statTotal">—</div>
+      <div class="stat-lbl">Total DLP Alerts</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val" id="statAuto">—</div>
+      <div class="stat-lbl">Auto-filled Cols</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val" id="statManual">—</div>
+      <div class="stat-lbl">Manual Entry Cols</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val" id="statFetched">—</div>
+      <div class="stat-lbl">Last Refreshed</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="tbl-card">
+      <div class="tbl-card-head">
+        <div>
+          <div class="tbl-card-title">All DLP Alerts — Incident Breakdown</div>
+          <div class="tbl-card-sub">Click any yellow cell to enter data. Edits are preserved on export.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div class="filter-bar">
+            <span class="filter-label">Status</span>
+            <select class="filter-select" id="statusFilter" onchange="applyFilter()">
+              <option value="all">All Statuses</option>
+            </select>
+            <span class="filter-count" id="filterCount"></span>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><div class="swatch swatch-auto"></div>Auto-filled from Microsoft Defender</div>
+            <div class="legend-item"><div class="swatch swatch-manual"></div>Manual input required</div>
+          </div>
+        </div>
+      </div>
+      <div class="tbl-scroll">
+        <table class="rpt" id="reportTable">
+          <thead id="reportHead"></thead>
+          <tbody id="reportBody">
+            <tr class="loading-row">
+              <td colspan="41"><span class="spinner"></span><span style="color:#64748b;font-size:13px">Loading report data…</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toastIcon"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+var COLUMNS    = [];
+var AUTO_COLS  = new Set();
+var reportRows = [];   // full dataset — never mutated by filter
+var activeFilter = 'all';
+
+function showToast(msg, ok) {
+  var t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = ok ? '✅' : '❌';
+  t.className = 'toast show ' + (ok ? 'ok' : 'err');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function() { t.className = 'toast'; }, 3800);
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmt(v) {
+  if (v == null || v === '') return '';
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+    try {
+      return new Date(v).toLocaleString('en-PH', {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', hour12: false
+      });
+    } catch(e) {}
+  }
+  return String(v);
+}
+
+async function loadReport() {
+  document.getElementById('refreshBtn').disabled = true;
+  document.getElementById('reportBody').innerHTML =
+    '<tr class="loading-row"><td colspan="41"><span class="spinner"></span>' +
+    '<span style="color:#64748b;font-size:13px">Fetching from Microsoft Defender…</span></td></tr>';
+  try {
+    var d = await fetch('/api/report/data').then(function(r) { return r.json(); });
+    if (!d.ok) throw new Error(d.error || 'Failed to load report.');
+    COLUMNS    = d.columns || [];
+    AUTO_COLS  = new Set(d.auto_cols || []);
+    reportRows = d.rows || [];
+
+    var autoCount   = COLUMNS.filter(function(c) { return AUTO_COLS.has(c); }).length;
+    var manualCount = COLUMNS.length - autoCount;
+    document.getElementById('statTotal').textContent  = reportRows.length;
+    document.getElementById('statAuto').textContent   = autoCount;
+    document.getElementById('statManual').textContent = manualCount;
+    document.getElementById('statFetched').textContent = new Date().toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('reportMeta').textContent =
+      reportRows.length + ' alert' + (reportRows.length !== 1 ? 's' : '') +
+      ' · ' + COLUMNS.length + ' columns · fetched ' + new Date().toLocaleTimeString();
+
+    // Populate status filter from actual data
+    var statuses = [];
+    reportRows.forEach(function(r) {
+      var s = (r['Incident Ticket Status (ServiceNow)'] || '').trim();
+      if (s && statuses.indexOf(s) === -1) statuses.push(s);
+    });
+    statuses.sort();
+    var sel = document.getElementById('statusFilter');
+    var prev = sel.value;
+    sel.innerHTML = '<option value="all">All Statuses</option>';
+    statuses.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      if (s === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    if (prev !== 'all' && statuses.indexOf(prev) === -1) {
+      activeFilter = 'all';
+      sel.value = 'all';
+    }
+
+    applyFilter();
+  } catch(e) {
+    document.getElementById('reportBody').innerHTML =
+      '<tr class="empty-row"><td colspan="41">⚠️ ' + esc(e.message) + '</td></tr>';
+    showToast(e.message, false);
+  }
+  document.getElementById('refreshBtn').disabled = false;
+}
+
+function applyFilter() {
+  activeFilter = document.getElementById('statusFilter').value;
+  var display = reportRows.map(function(row, i) { return { row: row, origIdx: i }; });
+  if (activeFilter !== 'all') {
+    display = display.filter(function(d) {
+      return (d.row['Incident Ticket Status (ServiceNow)'] || '').trim() === activeFilter;
+    });
+  }
+  var countEl = document.getElementById('filterCount');
+  if (activeFilter === 'all') {
+    countEl.textContent = '';
+  } else {
+    countEl.textContent = display.length + ' of ' + reportRows.length;
+  }
+  renderTable(display);
+}
+
+function renderTable(display) {
+  // Default: show all rows
+  if (!display) {
+    display = reportRows.map(function(row, i) { return { row: row, origIdx: i }; });
+  }
+
+  // Header
+  var htr = '<tr><th class="col-num">#</th>';
+  COLUMNS.forEach(function(col) {
+    htr += '<th title="' + esc(col) + '">' + esc(col) + '</th>';
+  });
+  document.getElementById('reportHead').innerHTML = htr + '</tr>';
+
+  if (!display.length) {
+    document.getElementById('reportBody').innerHTML =
+      '<tr class="empty-row"><td colspan="' + (COLUMNS.length + 1) + '">' +
+      (reportRows.length ? 'No alerts match the selected status.' : 'No DLP alerts found.') +
+      '</td></tr>';
+    return;
+  }
+
+  var html = '';
+  display.forEach(function(d, visIdx) {
+    var row  = d.row;
+    var ri   = d.origIdx;  // index into reportRows — used for data-row
+    var even = visIdx % 2 === 0;
+
+    var rawStatus = (row['Incident Ticket Status (ServiceNow)'] || row['_rawStatus'] || '').toLowerCase();
+    var isResolved = rawStatus === 'resolved';
+
+    html += '<tr>';
+    html += '<td class="col-num">' + (visIdx + 1) + '</td>';
+    COLUMNS.forEach(function(col) {
+      var isAuto = AUTO_COLS.has(col);
+      var val    = row[col];
+
+      if (isAuto) {
+        var cls = even ? 'auto' : 'auto-alt';
+        html += '<td class="' + cls + '" title="' + esc(fmt(val)) + '">' + esc(fmt(val)) + '</td>';
+      } else if (!isResolved) {
+        var cls = even ? 'pending' : 'pending-alt';
+        html += '<td class="' + cls + '"><span class="pending-chip">⏳ Pending Resolution</span></td>';
+      } else if (!val || val === '') {
+        var cls = even ? 'manual' : 'manual-alt';
+        html += '<td class="' + cls + '"><span class="pending-chip needs-input">✏️ Required</span>' +
+          '<input type="text" value="" placeholder="Enter value…" style="display:none" data-row="' + ri +
+          '" data-col="' + esc(col) + '" oninput="updateCell(this)" onblur="collapseInput(this)"></td>';
+      } else {
+        var cls = even ? 'manual' : 'manual-alt';
+        html += '<td class="' + cls + '"><input type="text" value="' + esc(val) +
+          '" data-row="' + ri + '" data-col="' + esc(col) +
+          '" oninput="updateCell(this)"></td>';
+      }
+    });
+    html += '</tr>';
+  });
+  document.getElementById('reportBody').innerHTML = html;
+}
+
+function updateCell(input) {
+  var ri  = parseInt(input.getAttribute('data-row'), 10);
+  var col = input.getAttribute('data-col');
+  if (!isNaN(ri) && col) reportRows[ri][col] = input.value;
+}
+
+function collapseInput(input) {
+  if (input.value.trim()) return; // keep open if user typed something
+  input.style.display = 'none';
+  var chip = input.previousElementSibling;
+  if (chip) chip.style.display = '';
+}
+
+// Click on "Required" chip to open the hidden input
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.classList.contains('needs-input')) {
+    var td    = e.target.closest('td');
+    var input = td && td.querySelector('input');
+    if (input) {
+      e.target.style.display = 'none';
+      input.style.display    = '';
+      input.focus();
+    }
+  }
+});
+
+async function exportExcel() {
+  // Capture any uncommitted inputs
+  document.querySelectorAll('#reportBody input[data-row]').forEach(function(inp) {
+    var ri  = parseInt(inp.getAttribute('data-row'), 10);
+    var col = inp.getAttribute('data-col');
+    if (!isNaN(ri) && col) reportRows[ri][col] = inp.value;
+  });
+
+  var btn = document.getElementById('exportBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+
+  try {
+    var resp = await fetch('/api/report/export-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: reportRows, columns: COLUMNS, auto_cols: Array.from(AUTO_COLS) })
+    });
+    if (!resp.ok) {
+      var err = await resp.json().catch(function() { return {}; });
+      throw new Error(err.error || 'Export failed.');
+    }
+    var blob = await resp.blob();
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.download = 'redflagged_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    showToast('Excel report exported successfully.', true);
+  } catch(e) {
+    showToast(e.message, false);
+  }
+
+  btn.disabled = false; btn.textContent = '⬇ Export to Excel';
+}
+
+// ── Auth ───────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (resp.status === 401) { window.location.href = '/login'; return false; }
+    const d = await resp.json();
+    if (!d.ok) { window.location.href = '/login'; return false; }
+    _applyUserUI(d.user);
+    document.body.style.visibility = '';
+    return true;
+  } catch (_) { window.location.href = '/login'; return false; }
+}
+function _applyUserUI(user) {
+  const initials = (user.display_name || user.email || '?').trim().charAt(0).toUpperCase();
+  document.getElementById('sidebarAvatar').textContent   = initials;
+  document.getElementById('sidebarUserName').textContent = user.display_name || user.email;
+  document.getElementById('sidebarUserRole').textContent = user.role;
+  document.getElementById('sidebarUser').style.display   = '';
+  document.getElementById('btnSignOut').style.display    = '';
+  const canSystem    = user.role === 'admin' || user.role === 'developer';
+  const canDevConfig = user.role === 'developer';
+  const canUserMgmt  = user.role === 'admin' || user.role === 'developer';
+  ['nav-group-system','nav-assignment','nav-system-config'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = canSystem ? '' : 'none';
+  });
+  var dev = document.getElementById('nav-dev-config'); if(dev) dev.style.display = canDevConfig ? '' : 'none';
+  var usr = document.getElementById('nav-users'); if(usr) usr.style.display = canUserMgmt ? '' : 'none';
+}
+async function signOut() {
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: '{}' }); } catch (_) {}
+  window.location.href = '/login';
+}
+
+(async function boot() {
+  const ok = await checkAuth();
+  if (ok) loadReport();
+}());
+</script>
+</body>
+</html>

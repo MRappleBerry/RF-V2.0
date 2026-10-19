@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: redflagged-dashboard
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python automation/dashboard_server.py --port $PORT --host 0.0.0.0
+    envVars:
+      - key: FLASK_API_BASE_URL
+        sync: false          # set manually in Render dashboard → URL of redflagged-api service
+      - key: AUTH_PROVIDER
+        value: json
+      - key: PYTHON_VERSION
+        value: "3.11"

@@ -1,0 +1,26 @@
+.env
+get_token.py
+__pycache__/
+*.pyc
+*.pyo
+redflagged.db
+data/users.json
+config.json
+data/analysts.json
+data/assignment_log.json
+data/system_settings.json
+.claude/
+
+# Legacy debug/run logs (operational clutter, reference real internal URLs/filenames)
+automation_output.txt
+debug_run.log
+last_run.txt
+output.txt
+automation/*.log
+
+# Cache files containing real client data (regenerated automatically; not for VCS)
+automation/db_info.txt
+automation/artifacts_inventory.json
+automation/latest_purview_export.json
+js/dbInfoData.js
+js/artifactData.js

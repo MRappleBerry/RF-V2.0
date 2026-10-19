@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedFlagged — Assignment Management</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --sidebar-w: 228px; --sidebar-bg: #0d1424; --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: #8b9ab4; --brand: #ef4444; --blue: #3b82f6; --blue-dark: #1d4ed8;
+  --bg: #f0f4f8; --card: #ffffff; --border: #e4e9f0;
+  --text: #1a2236; --text-muted: #64748b; --text-sub: #94a3b8;
+  --radius: 10px; --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+}
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 13.5px; line-height: 1.5; }
+
+/* Sidebar */
+.sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; border-right: 1px solid var(--sidebar-border); }
+.sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--sidebar-border); }
+.logo-wrap { display: flex; align-items: center; gap: 11px; }
+.logo-box { width: 34px; height: 34px; background: var(--brand); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(239,68,68,.4); }
+.logo-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.logo-tag  { font-size: 10px; color: var(--sidebar-text); text-transform: uppercase; letter-spacing: .6px; margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 14px 10px; }
+.nav-group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px; color: rgba(139,154,180,.45); padding: 6px 12px 4px; margin-top: 4px; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px; cursor: pointer; color: var(--sidebar-text); font-size: 13px; font-weight: 500; transition: all .15s; margin-bottom: 2px; text-decoration: none; }
+.nav-item:hover { background: rgba(255,255,255,.05); color: #cbd5e1; }
+.nav-item.active { background: rgba(59,130,246,.15); color: #60a5fa; font-weight: 600; }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; opacity: .85; }
+.nav-label { flex: 1; }
+.nav-chip { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 2px 6px; border-radius: 20px; background: rgba(139,154,180,.18); color: #8b9ab4; }
+.sidebar-footer { padding: 14px 20px; border-top: 1px solid var(--sidebar-border); }
+.live-row { display: flex; align-items: center; gap: 7px; }
+.live-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.live-text { font-size: 11px; color: var(--sidebar-text); }
+.footer-sub { font-size: 10px; color: var(--sidebar-text); margin-top: 3px; opacity: .7; }
+.sidebar-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sidebar-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); color:#fff; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sidebar-user-name { font-size:12px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-user-role { font-size:10px; color:var(--sidebar-text); text-transform:uppercase; letter-spacing:.5px; }
+.btn-signout { width:100%; padding:6px 10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#f87171; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; margin-bottom:10px; }
+.btn-signout:hover { background:rgba(239,68,68,.2); border-color:#f87171; }
+
+/* Main */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+.topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 15px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.page-title { font-size: 17px; font-weight: 700; }
+.page-sub   { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.content { padding: 28px; flex: 1; max-width: 960px; }
+.btn-ghost { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); font-size: 12.5px; cursor: pointer; text-decoration: none; }
+.btn-ghost:hover { background: var(--bg); }
+
+/* Section card */
+.section-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 24px; overflow: hidden; }
+.section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); background: #1e293b; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.section-head-left { display: flex; align-items: center; gap: 10px; }
+.sh-icon { font-size: 18px; }
+.sh-title { font-size: 13.5px; font-weight: 700; color: #f1f5f9; }
+.sh-desc  { font-size: 11.5px; color: #94a3b8; margin-top: 1px; }
+.section-body { padding: 0; }
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); padding: 10px 16px; border-bottom: 1px solid var(--border); text-align: left; background: #f8fafc; }
+.data-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #f8fafc; }
+.empty-row td { text-align: center; color: var(--text-sub); padding: 32px 16px; font-size: 13px; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-green  { background: #d1fae5; color: #065f46; }
+.badge-red    { background: #fee2e2; color: #991b1b; }
+.badge-yellow { background: #fef3c7; color: #92400e; }
+.badge-blue   { background: #dbeafe; color: #1e40af; }
+.badge-gray   { background: #f1f5f9; color: #64748b; }
+
+/* Toggle switch */
+.toggle-wrap { display: flex; align-items: center; gap: 6px; }
+.toggle { position: relative; display: inline-block; width: 34px; height: 18px; cursor: pointer; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #cbd5e1; border-radius: 18px; transition: .2s; }
+.toggle-slider::before { content: ''; position: absolute; width: 12px; height: 12px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .2s; }
+.toggle input:checked + .toggle-slider { background: #3b82f6; }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; text-decoration: none; }
+.btn-primary { background: var(--blue); color: white; }
+.btn-primary:hover { background: var(--blue-dark); }
+.btn-danger  { background: #fee2e2; color: #991b1b; }
+.btn-danger:hover  { background: #fecaca; }
+.btn-edit    { background: #f0f4ff; color: #3b82f6; border: 1px solid #bfdbfe; padding: 5px 10px; font-size: 12px; }
+.btn-edit:hover { background: #dbeafe; }
+.btn-del     { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 5px 10px; font-size: 12px; }
+.btn-del:hover { background: #ffe4e6; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* Modal */
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; align-items: center; justify-content: center; }
+.modal-backdrop.show { display: flex; }
+.modal { background: var(--card); border-radius: 14px; width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
+.modal-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 15px; font-weight: 700; }
+.modal-close { width: 28px; height: 28px; border: none; background: var(--bg); border-radius: 6px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.modal-close:hover { background: #fee2e2; color: #e11d48; }
+.modal-body { padding: 20px 22px; }
+.modal-foot { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+.field { margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+.field-label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 6px; }
+.field-input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 13px; font-size: 13.5px; color: var(--text); background: var(--bg); outline: none; font-family: inherit; transition: border-color .15s; }
+.field-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.field-row { display: flex; gap: 14px; }
+.field-row .field { flex: 1; }
+.field-check { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.field-check input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; }
+.field-check label { font-size: 13px; cursor: pointer; }
+select.field-input { cursor: pointer; }
+.search-wrap { position: relative; }
+.search-row { display: flex; gap: 8px; }
+.search-row .field-input { flex: 1; }
+.btn-search { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--blue); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-search:hover { background: var(--blue-dark); }
+.search-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 400; max-height: 200px; overflow-y: auto; display: none; }
+.search-dropdown.open { display: block; }
+.search-option { padding: 9px 13px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
+.search-option:last-child { border-bottom: none; }
+.search-option:hover { background: #f0f4f8; }
+.search-option .opt-name { font-weight: 600; color: var(--text); }
+.search-option .opt-email { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; font-family: monospace; }
+.search-no-results { padding: 10px 13px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+.selected-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 4px; }
+.selected-chip strong { color: var(--text); }
+.selected-chip small { color: var(--text-muted); font-family: monospace; }
+.chip-clear { border: none; background: none; cursor: pointer; color: var(--text-muted); font-size: 15px; padding: 0 2px; line-height: 1; }
+.chip-clear:hover { color: #dc2626; }
+.field-input[readonly] { background: #f1f5f9; color: var(--text-muted); cursor: default; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; background: #1e293b; color: #f1f5f9; padding: 11px 18px; border-radius: 10px; font-size: 13px; display: flex; align-items: center; gap: 9px; box-shadow: 0 4px 20px rgba(0,0,0,.25); opacity: 0; transform: translateY(8px); transition: all .2s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.ok { border-left: 3px solid #22c55e; }
+.toast.err { border-left: 3px solid #ef4444; }
+
+/* Log table */
+.log-ts { font-size: 11px; color: var(--text-sub); font-family: monospace; }
+.status-full     { color: #16a34a; font-weight: 600; }
+.status-partial  { color: #d97706; font-weight: 600; }
+.status-failed   { color: #dc2626; font-weight: 600; }
+.status-skipped  { color: #94a3b8; }
+.check-icon { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-wrap">
+      <div class="logo-box">🚩</div>
+      <div>
+        <div class="logo-name">RedFlagged</div>
+        <div class="logo-tag">Security Dashboard</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Monitoring</div>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+    </a>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">🚨</span><span class="nav-label">Incidents</span>
+    </a>
+    <a href="/report" class="nav-item">
+      <span class="nav-icon">📊</span><span class="nav-label">Report</span>
+    </a>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Zscaler integration — deployment in progress">
+      <span class="nav-icon">🔒</span><span class="nav-label">Zscaler</span><span class="nav-chip">ON DEV</span>
+    </div>
+    <div class="nav-group-label" id="nav-group-system" style="margin-top:14px">System</div>
+    <a href="/assignment" class="nav-item active" id="nav-assignment">
+      <span class="nav-icon">👥</span><span class="nav-label">Assignment</span>
+    </a>
+    <a href="/system-config" class="nav-item" id="nav-system-config">
+      <span class="nav-icon">🛠️</span><span class="nav-label">System Configuration</span>
+    </a>
+    <a href="/settings" class="nav-item" id="nav-dev-config">
+      <span class="nav-icon">⚙️</span><span class="nav-label">Developer Config</span>
+    </a>
+    <a href="/#users" class="nav-item" id="nav-users">
+      <span class="nav-icon">👤</span><span class="nav-label">User Management</span>
+    </a>
+    <div class="nav-group-label" style="margin-top:14px">Tools</div>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Coming soon">
+      <span class="nav-icon">🏷️</span><span class="nav-label">Data Classification</span><span class="nav-chip">SOON</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUser" style="display:none">
+      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="sidebar-user-name" id="sidebarUserName"></div>
+        <div class="sidebar-user-role" id="sidebarUserRole"></div>
+      </div>
+    </div>
+    <button class="btn-signout" id="btnSignOut" style="display:none" onclick="signOut()">Sign out</button>
+    <div class="live-row"><div class="live-dot"></div><span class="live-text">Live · Graph API</span></div>
+    <div class="footer-sub" id="footerSub">Live</div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════ -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">👥 Assignment Management</div>
+      <div class="page-sub">Configure analysts for automatic Defender + ServiceNow incident assignment</div>
+    </div>
+    <a href="/" class="btn-ghost">← Back to Dashboard</a>
+  </div>
+
+  <div class="content">
+
+    <!-- Analysts -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-head-left">
+          <span class="sh-icon">🧑‍💼</span>
+          <div>
+            <div class="sh-title">Assignment Resources</div>
+            <div class="sh-desc">Analysts eligible for automatic incident assignment (round-robin, Shift 1 &amp; 2)</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal()">+ Add Analyst</button>
+      </div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Display Name</th>
+              <th>Defender Account</th>
+              <th>ServiceNow Account</th>
+              <th>Shift</th>
+              <th>Active</th>
+              <th>Enabled</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="analystBody">
+            <tr class="empty-row"><td colspan="8">Loading analysts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Info box -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:12.5px;color:#1e40af;line-height:1.6">
+      <strong>Assignment Group</strong> for all ServiceNow incidents is always <code style="background:#dbeafe;padding:1px 5px;border-radius:4px">test_dlp</code>.
+      An analyst is selected by <strong>round-robin</strong> from all active, enabled, configured resources.
+      If no eligible analyst is found, both incidents are left unassigned and the event is logged below.
+      Configuration changes take effect on the next data refresh (no restart required).
+    </div>
+
+    <!-- Assignment Log -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-head-left">
+          <span class="sh-icon">📋</span>
+          <div>
+            <div class="sh-title">Assignment Audit Log</div>
+            <div class="sh-desc">History of all automatic assignment actions</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadLog()" style="color:var(--text-muted)">↻ Refresh</button>
+      </div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Incident</th>
+              <th>Analyst</th>
+              <th>Defender ✓</th>
+              <th>ServiceNow ✓</th>
+              <th>Snow Ticket</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+            <tr class="empty-row"><td colspan="7">Loading log…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ══ ADD / EDIT MODAL ══════════════════════════════════════ -->
+<div class="modal-backdrop" id="analystModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">Add Analyst</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <input type="hidden" id="fName">
+
+      <!-- Entra search -->
+      <div class="field">
+        <label class="field-label">Search by Email Address <span style="color:#ef4444">*</span></label>
+        <div id="entraChip" style="display:none" class="selected-chip">
+          <div><strong id="entraChipName"></strong><br><small id="entraChipEmail"></small></div>
+          <button class="chip-clear" onclick="clearEntraUser()" title="Clear">✕</button>
+        </div>
+        <div id="entraSearchWrap" class="search-wrap">
+          <div class="search-row">
+            <input class="field-input" id="entraQuery" type="email" placeholder="Type email address to search…" oninput="onEntraInput()" onkeydown="onEntraKey(event)">
+            <button class="btn-search" onclick="searchEntra()">Search</button>
+          </div>
+          <div class="search-dropdown" id="entraDropdown"></div>
+        </div>
+      </div>
+
+      <!-- Defender (auto-populated, read-only) -->
+      <div class="field">
+        <label class="field-label">Microsoft Defender Account</label>
+        <input class="field-input" id="fDefender" type="text" placeholder="Auto-populated from Entra" readonly>
+      </div>
+
+      <!-- ServiceNow (search from group members) -->
+      <div class="field">
+        <label class="field-label">ServiceNow Account <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0" id="snowGroupLabel"></span></label>
+        <div id="snowChip" style="display:none" class="selected-chip">
+          <div><strong id="snowChipName"></strong><br><small id="snowChipUser"></small></div>
+          <button class="chip-clear" onclick="clearSnowUser()" title="Clear">✕</button>
+        </div>
+        <div id="snowSearchWrap" class="search-wrap">
+          <input class="field-input" id="snowQuery" type="text" placeholder="Filter group members…" oninput="filterSnowMembers()" style="margin-bottom:4px">
+          <div class="search-dropdown" id="snowDropdown" style="position:static;display:block;max-height:160px;border-radius:8px;margin-top:0"></div>
+        </div>
+        <input type="hidden" id="fSnow">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="fShift">Shift</label>
+          <select class="field-input" id="fShift">
+            <option value="1">Shift 1</option>
+            <option value="2">Shift 2</option>
+          </select>
+        </div>
+        <div class="field" style="flex:0 0 auto;padding-top:24px">
+          <div class="field-check">
+            <input type="checkbox" id="fActive" checked>
+            <label for="fActive">Active</label>
+          </div>
+          <div class="field-check">
+            <input type="checkbox" id="fEnabled" checked>
+            <label for="fEnabled">Enabled</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveAnalyst()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ═════════════════════════════════════════════════ -->
+<div class="toast" id="toast">
+  <span id="toastIcon"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+function showToast(msg, ok) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent  = msg;
+  document.getElementById('toastIcon').textContent = ok ? '✅' : '❌';
+  t.className = 'toast show ' + (ok ? 'ok' : 'err');
+  setTimeout(function() { t.className = 'toast'; }, 3500);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Analysts ─────────────────────────────────────────────────
+let analysts = [];
+
+async function loadAnalysts() {
+  try {
+    const d = await fetch('/api/analysts').then(function(r){ return r.json(); });
+    analysts = d.analysts || [];
+    renderAnalysts();
+  } catch(e) {
+    document.getElementById('analystBody').innerHTML =
+      '<tr class="empty-row"><td colspan="8" style="color:#dc2626">Failed to load: ' + esc(e.message) + '</td></tr>';
+  }
+}
+
+function renderAnalysts() {
+  const tbody = document.getElementById('analystBody');
+  if (!analysts.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No analysts configured. Click <strong>+ Add Analyst</strong> to get started.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = analysts.map(function(a, i) {
+    const activeBadge  = a.active  ? '<span class="badge badge-green">Active</span>'   : '<span class="badge badge-red">Inactive</span>';
+    const enabledBadge = a.enabled ? '<span class="badge badge-blue">Enabled</span>'   : '<span class="badge badge-gray">Disabled</span>';
+    const shiftBadge   = '<span class="badge badge-yellow">Shift ' + (a.shift||1) + '</span>';
+    return '<tr>' +
+      '<td style="color:var(--text-sub)">' + (i+1) + '</td>' +
+      '<td><strong>' + esc(a.display_name) + '</strong></td>' +
+      '<td style="font-family:monospace;font-size:12px">' + esc(a.defender_account || '—') + '</td>' +
+      '<td style="font-family:monospace;font-size:12px">' + esc(a.snow_account || '—') + '</td>' +
+      '<td>' + shiftBadge + '</td>' +
+      '<td>' + activeBadge + '</td>' +
+      '<td>' + enabledBadge + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn btn-edit" onclick="openModal(\'' + esc(a.id) + '\')">Edit</button>' +
+        '&nbsp;<button class="btn btn-del" onclick="deleteAnalyst(\'' + esc(a.id) + '\', \'' + esc(a.display_name) + '\')">Delete</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── Entra search state ────────────────────────────────────────
+let entraSearchTimer = null;
+
+function onEntraInput() {
+  clearTimeout(entraSearchTimer);
+  entraSearchTimer = setTimeout(searchEntra, 400);
+}
+
+function onEntraKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); searchEntra(); }
+}
+
+async function searchEntra() {
+  const q = document.getElementById('entraQuery').value.trim();
+  const dd = document.getElementById('entraDropdown');
+  if (!q) { dd.classList.remove('open'); return; }
+  dd.innerHTML = '<div class="search-no-results">Searching…</div>';
+  dd.classList.add('open');
+  try {
+    const d = await fetch('/api/entra/search-users?q=' + encodeURIComponent(q)).then(function(r){ return r.json(); });
+    const users = d.users || [];
+    if (!users.length) {
+      dd.innerHTML = '<div class="search-no-results">No users found in Entra.</div>';
+      return;
+    }
+    dd.innerHTML = users.map(function(u) {
+      return '<div class="search-option" onclick="selectEntraUser(' + JSON.stringify(JSON.stringify(u)) + ')">' +
+        '<div class="opt-name">' + esc(u.displayName) + '</div>' +
+        '<div class="opt-email">' + esc(u.email) + '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    dd.innerHTML = '<div class="search-no-results" style="color:#dc2626">Error: ' + esc(e.message) + '</div>';
+  }
+}
+
+function selectEntraUser(jsonStr) {
+  const u = JSON.parse(jsonStr);
+  document.getElementById('fName').value     = u.displayName;
+  document.getElementById('fDefender').value = u.email;
+  document.getElementById('entraChipName').textContent  = u.displayName;
+  document.getElementById('entraChipEmail').textContent = u.email;
+  document.getElementById('entraChip').style.display       = '';
+  document.getElementById('entraSearchWrap').style.display = 'none';
+  document.getElementById('entraDropdown').classList.remove('open');
+}
+
+function clearEntraUser() {
+  document.getElementById('fName').value     = '';
+  document.getElementById('fDefender').value = '';
+  document.getElementById('entraChip').style.display       = 'none';
+  document.getElementById('entraSearchWrap').style.display = '';
+  document.getElementById('entraQuery').value = '';
+  document.getElementById('entraDropdown').classList.remove('open');
+  setTimeout(function(){ document.getElementById('entraQuery').focus(); }, 50);
+}
+
+// ── ServiceNow group members ──────────────────────────────────
+let snowMembers = [];
+
+async function loadSnowMembers() {
+  const dd = document.getElementById('snowDropdown');
+  const label = document.getElementById('snowGroupLabel');
+  dd.innerHTML = '<div class="search-no-results">Loading members…</div>';
+  try {
+    const d = await fetch('/api/snow/group-members').then(function(r){ return r.json(); });
+    snowMembers = d.members || [];
+    if (d.group) label.textContent = '— ' + d.group;
+    if (d.error) {
+      dd.innerHTML = '<div class="search-no-results" style="color:#dc2626">' + esc(d.error) + '</div>';
+      return;
+    }
+    renderSnowMembers(snowMembers);
+  } catch(e) {
+    dd.innerHTML = '<div class="search-no-results" style="color:#dc2626">Failed to load: ' + esc(e.message) + '</div>';
+  }
+}
+
+function filterSnowMembers() {
+  const q = document.getElementById('snowQuery').value.trim().toLowerCase();
+  const filtered = q ? snowMembers.filter(function(m){
+    return (m.name||'').toLowerCase().includes(q) || (m.username||'').toLowerCase().includes(q);
+  }) : snowMembers;
+  renderSnowMembers(filtered);
+}
+
+function renderSnowMembers(list) {
+  const dd = document.getElementById('snowDropdown');
+  if (!list.length) {
+    dd.innerHTML = '<div class="search-no-results">No members found.</div>';
+    return;
+  }
+  dd.innerHTML = list.map(function(m) {
+    return '<div class="search-option" onclick="selectSnowMember(' + JSON.stringify(JSON.stringify(m)) + ')">' +
+      '<div class="opt-name">' + esc(m.name) + '</div>' +
+      '<div class="opt-email">' + esc(m.username) + (m.email ? ' · ' + esc(m.email) : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectSnowMember(jsonStr) {
+  const m = JSON.parse(jsonStr);
+  document.getElementById('fSnow').value = m.username;
+  document.getElementById('snowChipName').textContent = m.name;
+  document.getElementById('snowChipUser').textContent = m.username + (m.email ? ' · ' + m.email : '');
+  document.getElementById('snowChip').style.display       = '';
+  document.getElementById('snowSearchWrap').style.display = 'none';
+}
+
+function clearSnowUser() {
+  document.getElementById('fSnow').value = '';
+  document.getElementById('snowChip').style.display       = 'none';
+  document.getElementById('snowSearchWrap').style.display = '';
+  document.getElementById('snowQuery').value = '';
+  renderSnowMembers(snowMembers);
+}
+
+// ── Modal open / close ────────────────────────────────────────
+function openModal(id) {
+  document.getElementById('analystModal').classList.add('show');
+  // Reset Entra
+  clearEntraUser();
+  // Reset Snow
+  clearSnowUser();
+  document.getElementById('snowQuery').value = '';
+
+  if (id) {
+    const a = analysts.find(function(x){ return x.id === id; });
+    if (!a) return;
+    document.getElementById('modalTitle').textContent = 'Edit Analyst';
+    document.getElementById('editId').value    = a.id;
+    // Pre-fill Entra chip from saved values
+    document.getElementById('fName').value     = a.display_name || '';
+    document.getElementById('fDefender').value = a.defender_account || '';
+    if (a.display_name) {
+      document.getElementById('entraChipName').textContent  = a.display_name;
+      document.getElementById('entraChipEmail').textContent = a.defender_account || '';
+      document.getElementById('entraChip').style.display       = '';
+      document.getElementById('entraSearchWrap').style.display = 'none';
+    }
+    // Pre-fill Snow chip
+    document.getElementById('fSnow').value = a.snow_account || '';
+    if (a.snow_account) {
+      document.getElementById('snowChipName').textContent = a.display_name || a.snow_account;
+      document.getElementById('snowChipUser').textContent = a.snow_account;
+      document.getElementById('snowChip').style.display       = '';
+      document.getElementById('snowSearchWrap').style.display = 'none';
+    }
+    document.getElementById('fShift').value    = String(a.shift || 1);
+    document.getElementById('fActive').checked  = !!a.active;
+    document.getElementById('fEnabled').checked = !!a.enabled;
+  } else {
+    document.getElementById('modalTitle').textContent = 'Add Analyst';
+    document.getElementById('editId').value = '';
+    document.getElementById('fShift').value = '1';
+    document.getElementById('fActive').checked  = true;
+    document.getElementById('fEnabled').checked = true;
+    setTimeout(function(){ document.getElementById('entraQuery').focus(); }, 100);
+  }
+  // Always (re)load Snow members
+  loadSnowMembers();
+}
+
+function closeModal() {
+  document.getElementById('analystModal').classList.remove('show');
+  document.getElementById('entraDropdown').classList.remove('open');
+}
+
+async function saveAnalyst() {
+  const id   = document.getElementById('editId').value;
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { showToast('Search and select an Entra user first.', false); return; }
+  const body = {
+    display_name:     name,
+    defender_account: document.getElementById('fDefender').value.trim(),
+    snow_account:     document.getElementById('fSnow').value.trim(),
+    shift:            parseInt(document.getElementById('fShift').value),
+    active:           document.getElementById('fActive').checked,
+    enabled:          document.getElementById('fEnabled').checked,
+  };
+  try {
+    const url    = id ? ('/api/analysts/' + id) : '/api/analysts';
+    const method = id ? 'PUT' : 'POST';
+    const d = await fetch(url, {
+      method: method, headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); });
+    if (d.ok) {
+      showToast(id ? 'Analyst updated.' : 'Analyst added.', true);
+      closeModal();
+      loadAnalysts();
+    } else {
+      showToast(d.error || 'Save failed.', false);
+    }
+  } catch(e) { showToast('Network error: ' + e.message, false); }
+}
+
+async function deleteAnalyst(id, name) {
+  if (!confirm('Delete analyst "' + name + '"?\nThis cannot be undone.')) return;
+  try {
+    const d = await fetch('/api/analysts/' + id, { method: 'DELETE' }).then(function(r){ return r.json(); });
+    if (d.ok) { showToast('Analyst deleted.', true); loadAnalysts(); }
+    else { showToast(d.error || 'Delete failed.', false); }
+  } catch(e) { showToast('Network error: ' + e.message, false); }
+}
+
+// ── Assignment Log ─────────────────────────────────────────────
+async function loadLog() {
+  const tbody = document.getElementById('logBody');
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Loading…</td></tr>';
+  try {
+    const d = await fetch('/api/assignment-log').then(function(r){ return r.json(); });
+    const log = d.log || [];
+    if (!log.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No assignment events yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = log.map(function(e) {
+      const ts = e.ts ? new Date(e.ts).toLocaleString() : '—';
+      const defenderIcon = e.defender_ok ? '✅' : (e.defender_ok === false ? '❌' : '—');
+      const snowIcon     = e.snow_ok     ? '✅' : (e.snow_ok     === false ? '❌' : '—');
+      let statusCls = 'status-skipped', statusLabel = e.status || '—';
+      if (e.status === 'full')              { statusCls = 'status-full';    statusLabel = 'Full'; }
+      else if (e.status === 'partial_defender') { statusCls = 'status-partial'; statusLabel = 'Partial (Defender)'; }
+      else if (e.status === 'partial_snow')     { statusCls = 'status-partial'; statusLabel = 'Partial (SNOW)'; }
+      else if (e.status === 'failed')       { statusCls = 'status-failed';  statusLabel = 'Failed'; }
+      else if (e.status === 'skipped_no_analysts') { statusLabel = 'No Analysts'; }
+      const analystCell = e.analyst_name
+        ? esc(e.analyst_name) + '<br><small style="color:var(--text-sub)">' + esc(e.snow_account||'') + '</small>'
+        : '<span style="color:var(--text-sub)">—</span>';
+      return '<tr>' +
+        '<td class="log-ts">' + esc(ts) + '</td>' +
+        '<td style="font-size:12px">' + esc(e.incident_title || e.incident_id) + '</td>' +
+        '<td style="font-size:12px">' + analystCell + '</td>' +
+        '<td class="check-icon" style="text-align:center">' + defenderIcon + '</td>' +
+        '<td class="check-icon" style="text-align:center">' + snowIcon     + '</td>' +
+        '<td style="font-family:monospace;font-size:12px">' + esc(e.snow_ticket || '—') + '</td>' +
+        '<td><span class="' + statusCls + '">' + esc(statusLabel) + '</span></td>' +
+      '</tr>';
+    }).join('');
+  } catch(err) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7" style="color:#dc2626">Failed: ' + esc(err.message) + '</td></tr>';
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('analystModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── Auth ───────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (resp.status === 401) { window.location.href = '/login'; return false; }
+    const d = await resp.json();
+    if (!d.ok) { window.location.href = '/login'; return false; }
+    const role = d.user.role;
+    if (role !== 'admin' && role !== 'developer') { window.location.href = '/'; return false; }
+    _applyUserUI(d.user);
+    document.body.style.visibility = '';
+    return true;
+  } catch (_) { window.location.href = '/login'; return false; }
+}
+function _applyUserUI(user) {
+  const initials = (user.display_name || user.email || '?').trim().charAt(0).toUpperCase();
+  document.getElementById('sidebarAvatar').textContent   = initials;
+  document.getElementById('sidebarUserName').textContent = user.display_name || user.email;
+  document.getElementById('sidebarUserRole').textContent = user.role;
+  document.getElementById('sidebarUser').style.display   = '';
+  document.getElementById('btnSignOut').style.display    = '';
+  var devEl = document.getElementById('nav-dev-config');
+  if (devEl) devEl.style.display = (user.role === 'developer') ? '' : 'none';
+}
+async function signOut() {
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: '{}' }); } catch (_) {}
+  window.location.href = '/login';
+}
+
+// Initial load
+(async function boot() {
+  const ok = await checkAuth();
+  if (ok) { loadAnalysts(); loadLog(); }
+}());
+</script>
+</body>
+</html>

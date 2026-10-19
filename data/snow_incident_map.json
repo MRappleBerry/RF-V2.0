@@ -1,0 +1,24 @@
+{
+  "3": {
+    "snow_number": "INC0010017",
+    "snow_sys_id": "5dc45e91830c93100d495d70deaad38a",
+    "children_created": 3,
+    "children": [
+      {
+        "ticket": "INC0010018",
+        "sys_id": "07c49e91830c93100d495d70deaad36c",
+        "alert_id": "dl65c247c2-6089-2531-7600-08df23d60395"
+      },
+      {
+        "ticket": "INC0010019",
+        "sys_id": "98d4de91830c93100d495d70deaad393",
+        "alert_id": "dl65c247c2-6089-2531-a200-08df23d40ee7"
+      },
+      {
+        "ticket": "INC0010020",
+        "sys_id": "4dd412d1830c93100d495d70deaad31d",
+        "alert_id": "dl65c247c2-6089-2531-ea00-08df23d5bc0e"
+      }
+    ]
+  }
+}

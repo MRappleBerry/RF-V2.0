@@ -1,0 +1,23 @@
+# RedFlagged — enterprise API rebuild
+# Install: pip install -r requirements.txt
+
+# Microsoft authentication
+msal>=1.28.0
+
+# HTTP client
+requests>=2.32.0
+
+# Database — SQLite (built-in, no install needed) for local dev
+# Swap SQL_CONNECTION_STRING in .env to use Azure SQL in production
+SQLAlchemy>=2.0.0
+# pyodbc>=5.0.0  # uncomment when connecting to Azure SQL
+
+# Artifact parsing (Data Found At feature)
+openpyxl>=3.1.5
+pypdf>=6.0.0
+
+# Password hashing (user authentication)
+argon2-cffi>=23.1.0
+
+# Local dev only — not needed in production
+python-dotenv>=1.0.0

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedFlagged — System Configuration</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 228px;
+  --sidebar-bg: #0d1424;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: #8b9ab4;
+  --brand: #ef4444;
+  --blue: #3b82f6;
+  --blue-dark: #1d4ed8;
+  --navy: #0d1424;
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --border: #e4e9f0;
+  --text: #1a2236;
+  --text-muted: #64748b;
+  --text-sub: #94a3b8;
+  --radius: 10px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; min-height: 100vh; font-size: 13.5px; line-height: 1.5;
+}
+
+/* ─── Sidebar ────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  border-right: 1px solid var(--sidebar-border);
+}
+.sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--sidebar-border); }
+.logo-wrap { display: flex; align-items: center; gap: 11px; }
+.logo-box {
+  width: 34px; height: 34px; background: var(--brand); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(239,68,68,.4);
+}
+.logo-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.logo-tag  { font-size: 10px; color: var(--sidebar-text); text-transform: uppercase; letter-spacing: .6px; margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 14px 10px; overflow-y: auto; }
+.nav-group-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .9px; color: rgba(139,154,180,.45); padding: 6px 12px 4px; margin-top: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px;
+  cursor: pointer; color: var(--sidebar-text); font-size: 13px; font-weight: 500;
+  transition: all .15s; margin-bottom: 2px; text-decoration: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.05); color: #cbd5e1; }
+.nav-item.active { background: rgba(59,130,246,.15); color: #60a5fa; font-weight: 600; }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; opacity: .85; }
+.nav-label { flex: 1; }
+.nav-chip {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 2px 6px; border-radius: 20px; background: rgba(139,154,180,.18); color: #8b9ab4;
+}
+.sidebar-footer { padding: 14px 20px; border-top: 1px solid var(--sidebar-border); }
+.live-row { display: flex; align-items: center; gap: 7px; }
+.live-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.live-text { font-size: 11px; color: var(--sidebar-text); }
+.footer-sub { font-size: 10px; color: var(--sidebar-text); margin-top: 3px; opacity: .7; }
+.sidebar-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sidebar-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); color:#fff; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sidebar-user-name { font-size:12px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-user-role { font-size:10px; color:var(--sidebar-text); text-transform:uppercase; letter-spacing:.5px; }
+.btn-signout { width:100%; padding:6px 10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#f87171; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; margin-bottom:10px; }
+.btn-signout:hover { background:rgba(239,68,68,.2); border-color:#f87171; }
+
+/* ─── Main ───────────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+.topbar {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 15px 28px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 50;
+}
+.page-title { font-size: 17px; font-weight: 700; }
+.page-sub   { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.content { padding: 28px; flex: 1; max-width: 820px; }
+
+/* ─── Config sections ────────────────────────────────────── */
+.cfg-section {
+  background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
+  box-shadow: var(--shadow); margin-bottom: 24px; overflow: hidden;
+}
+.cfg-head {
+  padding: 14px 20px; border-bottom: 1px solid var(--border); background: #1e293b;
+  display: flex; align-items: center; gap: 10px;
+}
+.cfg-head-icon { font-size: 18px; }
+.cfg-head-title { font-size: 13.5px; font-weight: 700; color: #f1f5f9; }
+.cfg-head-desc  { font-size: 11.5px; color: #94a3b8; margin-top: 1px; }
+.cfg-body { padding: 20px; }
+.cfg-row { margin-bottom: 18px; }
+.cfg-row:last-child { margin-bottom: 0; }
+.cfg-label {
+  display: block; font-size: 12px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px;
+}
+.cfg-label span { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-sub); margin-left: 4px; }
+.cfg-input {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 13px; font-size: 13.5px; color: var(--text); background: var(--bg);
+  outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.cfg-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.1); background: #fff; }
+.cfg-hint { font-size: 11.5px; color: var(--text-sub); margin-top: 5px; }
+
+/* ─── Buttons ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--blue); color: #fff; border: none;
+  padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: background .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--blue-dark); }
+.btn:disabled { background: #94a3b8; cursor: not-allowed; }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg); color: var(--text-muted); border: 1px solid var(--border);
+  padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: all .15s; white-space: nowrap; text-decoration: none;
+}
+.btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+.btn-save {
+  background: #16a34a; color: #fff; border: none;
+  padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700;
+  transition: background .15s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-save:hover { background: #15803d; }
+.btn-save:disabled { background: #94a3b8; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; align-items: center; margin-top: 20px; flex-wrap: wrap; }
+
+/* ─── Status items ───────────────────────────────────────── */
+.status-row {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-radius: 8px; background: #f8fafc; border: 1px solid var(--border);
+  margin-bottom: 10px; font-size: 12.5px;
+}
+.status-row:last-child { margin-bottom: 0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.ok  { background: #22c55e; }
+.status-dot.err { background: #ef4444; }
+.status-dot.warn { background: #f59e0b; }
+.status-label { flex: 1; color: var(--text-muted); }
+.status-val { font-weight: 600; color: var(--text); font-family: 'Consolas', monospace; }
+
+/* ─── Toast ──────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: #1e293b; color: #f1f5f9; padding: 12px 24px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s;
+  opacity: 0; z-index: 999; display: flex; align-items: center; gap: 10px;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.ok  { border-left: 4px solid #22c55e; }
+.toast.err { border-left: 4px solid #ef4444; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-wrap">
+      <div class="logo-box">🚩</div>
+      <div>
+        <div class="logo-name">RedFlagged</div>
+        <div class="logo-tag">Security Dashboard</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Monitoring</div>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">🚨</span>
+      <span class="nav-label">Incidents</span>
+    </a>
+    <a href="/report" class="nav-item">
+      <span class="nav-icon">📄</span>
+      <span class="nav-label">Report</span>
+    </a>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Zscaler integration — deployment in progress">
+      <span class="nav-icon">🔒</span>
+      <span class="nav-label">Zscaler</span>
+      <span class="nav-chip">ON DEV</span>
+    </div>
+    <div class="nav-group-label" id="nav-group-system" style="margin-top:14px">System</div>
+    <a href="/assignment" class="nav-item" id="nav-assignment">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Assignment</span>
+    </a>
+    <a href="/system-config" class="nav-item active" id="nav-system-config">
+      <span class="nav-icon">🛠️</span>
+      <span class="nav-label">System Configuration</span>
+    </a>
+    <a href="/settings" class="nav-item" id="nav-dev-config">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Developer Config</span>
+    </a>
+    <a href="/#users" class="nav-item" id="nav-users">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">User Management</span>
+    </a>
+    <div class="nav-group-label" style="margin-top:14px">Tools</div>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Coming soon">
+      <span class="nav-icon">🏷️</span>
+      <span class="nav-label">Data Classification</span>
+      <span class="nav-chip">SOON</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUser" style="display:none">
+      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="sidebar-user-name" id="sidebarUserName"></div>
+        <div class="sidebar-user-role" id="sidebarUserRole"></div>
+      </div>
+    </div>
+    <button class="btn-signout" id="btnSignOut" style="display:none" onclick="signOut()">Sign out</button>
+    <div class="live-row"><div class="live-dot"></div><span class="live-text">Live · Graph API</span></div>
+    <div class="footer-sub" id="footerSub">Live</div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════ -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">🛠️ System Configuration</div>
+      <div class="page-sub">Manage system-wide settings for the RedFlagged platform</div>
+    </div>
+    <a href="/" class="btn-ghost">← Back to Dashboard</a>
+  </div>
+
+  <div class="content">
+
+    <!-- ServiceNow Configuration -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">🎫</span>
+        <div>
+          <div class="cfg-head-title">ServiceNow Configuration</div>
+          <div class="cfg-head-desc">Assignment group used when creating and routing ServiceNow incidents</div>
+        </div>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <label class="cfg-label" for="assignmentGroup">
+            Default Assignment Group
+            <span>— name must match exactly in ServiceNow</span>
+          </label>
+          <input class="cfg-input" id="assignmentGroup" type="text"
+            placeholder="e.g. DLP Response Team" autocomplete="off">
+          <div class="cfg-hint">
+            Tickets created from Defender incidents are automatically routed to this group.
+            The logged-in user must also be a member of this group to self-assign.
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-save" id="saveGroupBtn" onclick="saveAssignmentGroup()">
+            💾 Save
+          </button>
+          <button class="btn" onclick="lookupGroup()" style="background:#0f172a">
+            🔍 Verify in ServiceNow
+          </button>
+          <span id="groupMsg" style="font-size:12.5px;font-weight:600;display:none"></span>
+        </div>
+        <div id="groupLookupResult" style="margin-top:16px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="cfg-section">
+      <div class="cfg-head">
+        <span class="cfg-head-icon">📡</span>
+        <div>
+          <div class="cfg-head-title">System Status</div>
+          <div class="cfg-head-desc">Current configuration values loaded by the server</div>
+        </div>
+      </div>
+      <div class="cfg-body" id="statusBody">
+        <div style="color:var(--text-muted);font-size:12.5px">Loading…</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span class="toast-icon" id="toastIcon"></span><span id="toastMsg"></span></div>
+
+<script>
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var _toastTimer;
+function showToast(msg, ok) {
+  var t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = ok ? '✅' : '❌';
+  t.className = 'toast ' + (ok ? 'ok' : 'err');
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { t.classList.remove('show'); }, 4000);
+}
+
+// ── Load current assignment group ──────────────────────────
+async function loadConfig() {
+  try {
+    var d = await fetch('/api/system-config/assignment-group').then(function(r) { return r.json(); });
+    if (d.ok && d.group_name) {
+      document.getElementById('assignmentGroup').value = d.group_name;
+    }
+  } catch(e) {}
+  loadStatus();
+}
+
+// ── Save assignment group ──────────────────────────────────
+async function saveAssignmentGroup() {
+  var btn = document.getElementById('saveGroupBtn');
+  var msgEl = document.getElementById('groupMsg');
+  var val = document.getElementById('assignmentGroup').value.trim();
+  if (!val) { showToast('Please enter an assignment group name.', false); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving…';
+  msgEl.style.display = 'none';
+
+  try {
+    var d = await fetch('/api/system-config/assignment-group', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({group_name: val})
+    }).then(function(r) { return r.json(); });
+
+    if (d.ok) {
+      showToast('Assignment group saved: ' + val, true);
+      msgEl.style.display = '';
+      msgEl.style.color = '#15803d';
+      msgEl.textContent = '✓ Saved';
+      setTimeout(function() { msgEl.style.display = 'none'; }, 3000);
+    } else {
+      showToast(d.message || 'Save failed.', false);
+    }
+  } catch(e) {
+    showToast('Request failed: ' + e.message, false);
+  }
+  btn.disabled = false;
+  btn.textContent = '💾 Save';
+}
+
+// ── Verify group exists in ServiceNow ─────────────────────
+async function lookupGroup() {
+  var val = document.getElementById('assignmentGroup').value.trim();
+  if (!val) { showToast('Enter a group name to verify.', false); return; }
+  var el = document.getElementById('groupLookupResult');
+  el.style.display = '';
+  el.innerHTML = '<span style="color:var(--text-muted);font-size:12.5px">Looking up in ServiceNow…</span>';
+  try {
+    var d = await fetch('/api/assignment-group/members?group_name=' + encodeURIComponent(val))
+      .then(function(r) { return r.json(); });
+    if (d.error) {
+      el.innerHTML = '<div style="color:#dc2626;font-size:12.5px">❌ ' + esc(d.error) + '</div>';
+      return;
+    }
+    var members = d.members || [];
+    if (!members.length) {
+      el.innerHTML = '<div style="color:#d97706;font-size:12.5px">⚠️ Group found but has no members.</div>';
+      return;
+    }
+    var html = '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">' +
+      '✓ Group found — ' + members.length + ' member(s)</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    members.forEach(function(m) {
+      var name = (m['user.name'] || m['user.user_name'] || m['user.email'] || '').toString();
+      html += '<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;' +
+        'padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">' + esc(name) + '</span>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#dc2626;font-size:12.5px">❌ Request failed: ' + esc(e.message) + '</div>';
+  }
+}
+
+// ── Load system status panel ───────────────────────────────
+async function loadStatus() {
+  var el = document.getElementById('statusBody');
+  try {
+    var d = await fetch('/api/system-config/assignment-group').then(function(r) { return r.json(); });
+    var group = (d.ok && d.group_name) ? d.group_name : '(not set)';
+    var groupOk = !!(d.ok && d.group_name);
+
+    el.innerHTML =
+      statusRow(groupOk, 'Default Assignment Group', group) +
+      statusRow(null, 'Configuration Source', 'data/system_settings.json');
+  } catch(e) {
+    el.innerHTML = '<div style="color:#dc2626;font-size:12.5px">Could not load status.</div>';
+  }
+}
+
+function statusRow(ok, label, val) {
+  var dotClass = ok === null ? 'warn' : (ok ? 'ok' : 'err');
+  return '<div class="status-row">' +
+    '<div class="status-dot ' + dotClass + '"></div>' +
+    '<div class="status-label">' + esc(label) + '</div>' +
+    '<div class="status-val">' + esc(val) + '</div>' +
+    '</div>';
+}
+
+// ── Auth ───────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (resp.status === 401) { window.location.href = '/login'; return false; }
+    const d = await resp.json();
+    if (!d.ok) { window.location.href = '/login'; return false; }
+    const role = d.user.role;
+    if (role !== 'admin' && role !== 'developer') { window.location.href = '/'; return false; }
+    _applyUserUI(d.user);
+    document.body.style.visibility = '';
+    return true;
+  } catch (_) { window.location.href = '/login'; return false; }
+}
+function _applyUserUI(user) {
+  const initials = (user.display_name || user.email || '?').trim().charAt(0).toUpperCase();
+  document.getElementById('sidebarAvatar').textContent   = initials;
+  document.getElementById('sidebarUserName').textContent = user.display_name || user.email;
+  document.getElementById('sidebarUserRole').textContent = user.role;
+  document.getElementById('sidebarUser').style.display   = '';
+  document.getElementById('btnSignOut').style.display    = '';
+  var devEl = document.getElementById('nav-dev-config');
+  if (devEl) devEl.style.display = (user.role === 'developer') ? '' : 'none';
+}
+async function signOut() {
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: '{}' }); } catch (_) {}
+  window.location.href = '/login';
+}
+
+// ── Init ───────────────────────────────────────────────────
+(async function boot() {
+  const ok = await checkAuth();
+  if (ok) loadConfig();
+}());
+</script>
+</body>
+</html>
