@@ -854,6 +854,7 @@ function syncDashboardIncidentRows(){
   incidentRows = mergeIncidentRowState(incidentRows, nextRows);
   renderIncidentsTable(incidentRows);
   renderExecutiveDashboard(incidentRows);
+  loadExecutiveTrends();
 }
 
 function updateStatusBadgeClass(el, statusText){
@@ -1699,6 +1700,53 @@ function renderExecutiveDashboard(rows){
 
   updateExecutiveYearFilterOptions();
   renderClassificationHistoryTable();
+}
+
+function renderTrendRows(containerEl, items, labelKey, formatLabel){
+  if(!containerEl) return;
+  if(!items || !items.length){
+    containerEl.innerHTML = '<div class="incident-empty">No incidents recorded yet.</div>';
+    return;
+  }
+  const maxCount = Math.max(...items.map((item) => item.count), 1);
+  containerEl.innerHTML = items.map((item) => {
+    const pct = Math.round((item.count / maxCount) * 100);
+    const label = formatLabel ? formatLabel(item[labelKey]) : item[labelKey];
+    return (
+      '<div class="chart-row">' +
+        '<span>' + label + '</span>' +
+        '<div class="chart-bar"><div class="chart-fill good" style="width:' + pct + '%"></div></div>' +
+        '<small>' + item.count + '</small>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function formatTrendDay(dayStr){
+  const d = new Date(dayStr + 'T00:00:00Z');
+  if(Number.isNaN(d.getTime())) return dayStr;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(d);
+}
+
+function formatTrendMonth(monthStr){
+  const d = new Date(monthStr + '-01T00:00:00Z');
+  if(Number.isNaN(d.getTime())) return monthStr;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(d);
+}
+
+async function loadExecutiveTrends(){
+  const dailyEl = document.getElementById('trend-daily-rows');
+  const monthlyEl = document.getElementById('trend-monthly-rows');
+  if(!dailyEl && !monthlyEl) return;
+  try {
+    const resp = await fetch('/api/report/trends').then((r) => r.json());
+    if(!resp.ok) throw new Error(resp.error || 'Failed to load trends.');
+    renderTrendRows(dailyEl, resp.daily, 'date', formatTrendDay);
+    renderTrendRows(monthlyEl, resp.monthly, 'month', formatTrendMonth);
+  } catch (e) {
+    if(dailyEl) dailyEl.innerHTML = '<div class="incident-empty">Could not load daily trend.</div>';
+    if(monthlyEl) monthlyEl.innerHTML = '<div class="incident-empty">Could not load monthly trend.</div>';
+  }
 }
 
 function getSystemThemeMode(){
@@ -3526,6 +3574,7 @@ if(tabExecutive){
     e.preventDefault();
     setActiveTab('executive');
     renderExecutiveDashboard(incidentRows);
+    loadExecutiveTrends();
   });
 }
 

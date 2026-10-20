@@ -737,10 +737,10 @@ tbody tr.tr-child-alert td.child-title-cell { padding-left: 42px; border-left: 3
   </div>
   <nav class="sidebar-nav">
     <div class="nav-group-label">Monitoring</div>
-    <div class="nav-item" onclick="showPanel('events')" style="cursor:pointer">
+    <a class="nav-item" href="/overview">
       <span class="nav-icon">📊</span>
       <span class="nav-label">Dashboard</span>
-    </div>
+    </a>
     <div class="nav-item active" id="nav-events" onclick="showPanel('events')" style="cursor:pointer">
       <span class="nav-icon">🚨</span>
       <span class="nav-label">Incidents</span>
@@ -1075,6 +1075,10 @@ let allInc = [], allDlp = [], allItems = [];
 let knownInc = new Set(), knownDlp = new Set();
 let firstLoad = true, activeRow = null;
 let currentAlert = null;
+// Target incident ID for an open Resolve modal, pinned at open time so a
+// background refresh swapping currentAlert mid-interaction can't redirect
+// a submission to the wrong incident.
+let resolveModalIncId = '';
 let unifPage = 0, unifSourceFilter = 'all', unifStatusFilter = 'all', unifSearchStr = '';
 const PAGE_SIZE = 10;
 let expandedInc = new Set();
@@ -4882,8 +4886,8 @@ async function runGoHunt() {
       </div>
 
       <div class="rm-field">
-        <label class="rm-label">ServiceNow Incident Number <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
-        <input class="rm-input" id="rm-snow-ticket" type="text" placeholder="e.g. INC0012345">
+        <label class="rm-label">ServiceNow Incident Number <span style="font-weight:400;color:#94a3b8">(auto-filled)</span></label>
+        <input class="rm-input" id="rm-snow-ticket" type="text" readonly style="background:#f1f5f9;color:#64748b;cursor:default" placeholder="No ServiceNow ticket linked to this incident yet…">
       </div>
 
       <div class="rm-field">
@@ -5279,7 +5283,11 @@ async function assignToUser(targetEmail) {
 function openResolveModal() {
   if (!currentAlert) return;
   var inc   = currentAlert;
-  var incId = String(inc.incidentId || inc._inc_id || '');
+  var incId = String(inc.incidentId || inc._inc_id || (inc._type === 'incident' ? inc.id : '') || '');
+  resolveModalIncId = incId;
+  // Pause the periodic list refresh while this modal is open — it can swap
+  // currentAlert/drawer content out from under an in-progress fill.
+  clearInterval(timer);
   // Reset all fields to defaults first
   document.getElementById('rm-snow-ticket').value           = '';
   document.getElementById('rm-assignedTo').value            = inc._inc_assignedTo || inc.assignedTo || '';
@@ -5330,6 +5338,8 @@ function openResolveModal() {
 function closeResolveModal(e) {
   if (e && e.target !== document.getElementById('resolveBackdrop')) return;
   document.getElementById('resolveBackdrop').classList.remove('show');
+  resolveModalIncId = '';
+  startCountdown();
 }
 
 function rmToggleComment() {
@@ -5358,7 +5368,7 @@ function renderRmTags() {
 }
 
 async function submitResolve() {
-  var incidentId = currentAlert && (currentAlert._inc_id || currentAlert.incidentId);
+  var incidentId = resolveModalIncId;
   if (!incidentId) {
     document.getElementById('rm-error').textContent = 'No incident ID found for this alert.';
     document.getElementById('rm-error').style.display = '';
@@ -5420,6 +5430,7 @@ async function submitResolve() {
 
     if (!d.ok) throw new Error(d.error || 'Save failed.');
     document.getElementById('resolveBackdrop').classList.remove('show');
+    resolveModalIncId = '';
     var msg = status === 'resolved'
       ? (snowTicket ? 'Incident resolved and ServiceNow ticket ' + snowTicket + ' closed.' : 'Incident resolved in Defender (no ServiceNow sync).')
       : 'Incident updated successfully.';

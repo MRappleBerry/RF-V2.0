@@ -20,5 +20,73 @@
         "alert_id": "dl65c247c2-6089-2531-ea00-08df23d5bc0e"
       }
     ]
+  },
+  "1": {
+    "snow_number": "INC0010021",
+    "snow_sys_id": "f6b04921834017100d495d70deaad398",
+    "children_created": 5,
+    "children": [
+      {
+        "ticket": "INC0010022",
+        "sys_id": "6bb04921834017100d495d70deaad3f8",
+        "alert_id": "dl260b2585-f7f3-a83a-1e00-08df23a44808"
+      },
+      {
+        "ticket": "INC0010023",
+        "sys_id": "0cc08921834017100d495d70deaad37b",
+        "alert_id": "dl260b2585-f7f3-a83a-d800-08df23a42444"
+      },
+      {
+        "ticket": "INC0010024",
+        "sys_id": "34c0c921834017100d495d70deaad32f",
+        "alert_id": "dl9b296b66-3b10-3acd-1c00-08df23a2bea4"
+      },
+      {
+        "ticket": "INC0010025",
+        "sys_id": "25c0c921834017100d495d70deaad3e2",
+        "alert_id": "dlb923e302-49dc-b2c3-0400-08df23a22f97"
+      },
+      {
+        "ticket": "INC0010026",
+        "sys_id": "96c00d21834017100d495d70deaad383",
+        "alert_id": "dlb923e302-49dc-b2c3-ea00-08df23a01725"
+      }
+    ]
+  },
+  "2": {
+    "snow_number": "INC0010027",
+    "snow_sys_id": "27473d6d83c417100d495d70deaad3fe",
+    "children_created": 1,
+    "children": [
+      {
+        "ticket": "INC0010028",
+        "sys_id": "cc57b5ad83c417100d495d70deaad3e7",
+        "alert_id": "dlbfe31589-5ac1-9328-d400-08df23c4d4c2"
+      }
+    ]
+  },
+  "6": {
+    "snow_number": "INC0010029",
+    "snow_sys_id": "e3f6ba6183cc17100d495d70deaad344",
+    "children_created": 1,
+    "children": [
+      {
+        "ticket": "INC0010030",
+        "sys_id": "000732a983cc17100d495d70deaad3cb",
+        "alert_id": "fa761cf877-4c69-feeb-a000-08df2815495a"
+      }
+    ]
+  },
+  "7": {
+    "snow_number": "INC0010031",
+    "snow_sys_id": "e96b3ea1830057100d495d70deaad3be",
+    "children_created": 1,
+    "children": [
+      {
+        "ticket": "INC0010032",
+        "sys_id": "026b3ea1830057100d495d70deaad3fd",
+        "alert_id": "fa761cf877-4c69-feeb-3e00-08df2d96250f"
+      }
+    ]
   }
 }

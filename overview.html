@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedFlagged — Dashboard</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 228px;
+  --sidebar-bg: #0d1424;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: #8b9ab4;
+  --brand: #ef4444;
+  --blue: #3b82f6;
+  --green: #16a34a;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 6px rgba(0,0,0,0.05), 0 10px 15px rgba(0,0,0,0.04);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; min-height: 100vh; font-size: 13px; line-height: 1.5;
+}
+
+/* ─── Sidebar (shared look with report.html) ────────────────── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  border-right: 1px solid var(--sidebar-border);
+}
+.sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--sidebar-border); }
+.logo-wrap { display: flex; align-items: center; gap: 11px; }
+.logo-box {
+  width: 34px; height: 34px; background: var(--brand); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(239,68,68,.4);
+}
+.logo-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.logo-tag  { font-size: 10px; color: var(--sidebar-text); text-transform: uppercase; letter-spacing: .6px; margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 14px 10px; }
+.nav-group-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .9px; color: rgba(139,154,180,.4); padding: 6px 12px 4px; margin-top: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px;
+  color: var(--sidebar-text); font-size: 13px; font-weight: 500;
+  transition: all .15s; margin-bottom: 2px; text-decoration: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.05); color: #cbd5e1; }
+.nav-item.active { background: rgba(59,130,246,.15); color: #60a5fa; font-weight: 600; }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; opacity: .85; }
+.nav-label { flex: 1; }
+.nav-chip { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 2px 6px; border-radius: 20px; background: rgba(139,154,180,.18); color: #8b9ab4; }
+.sidebar-footer { padding: 14px 16px; border-top: 1px solid var(--sidebar-border); }
+.live-row { display: flex; align-items: center; gap: 7px; }
+.live-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+.live-text { font-size: 11px; color: var(--sidebar-text); }
+.footer-sub { font-size: 10px; color: var(--sidebar-text); margin-top: 3px; opacity: .7; }
+.sidebar-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sidebar-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); color:#fff; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sidebar-user-name { font-size:12px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-user-role { font-size:10px; color:var(--sidebar-text); text-transform:uppercase; letter-spacing:.5px; }
+.btn-signout { width:100%; padding:6px 10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#f87171; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; margin-bottom:10px; }
+.btn-signout:hover { background:rgba(239,68,68,.2); border-color:#f87171; }
+
+/* ─── Main layout ────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  background: var(--sidebar-bg);
+  padding: 18px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  position: sticky; top: 0; z-index: 50; flex-wrap: wrap;
+}
+.topbar-title {
+  font-size: 19px; font-weight: 700; color: #f1f5f9;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar-title-icon {
+  width: 34px; height: 34px; background: rgba(59,130,246,.2); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+}
+.topbar-sub { font-size: 12px; color: #64748b; margin-top: 3px; padding-left: 44px; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; color: #94a3b8;
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-outline:hover { border-color: rgba(255,255,255,.28); color: #f1f5f9; }
+
+.content { padding: 22px 28px; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+}
+.card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.card-sub { font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; }
+
+.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .cards-grid { grid-template-columns: 1fr; } }
+
+.chart-row { display: grid; grid-template-columns: 90px 1fr 36px; align-items: center; gap: 10px; padding: 5px 0; }
+.chart-row span, .chart-row small { color: var(--text-muted); font-size: 12px; }
+.chart-row small { text-align: right; font-weight: 700; color: var(--text); }
+.chart-bar { height: 10px; border-radius: 999px; border: 1px solid var(--border); background: #f1f5f9; overflow: hidden; }
+.chart-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--blue); transition: width .24s ease; }
+
+.empty-note { padding: 10px 0; color: var(--text-muted); font-size: 12.5px; }
+
+.badge-soon {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 8px;
+}
+.placeholder-box {
+  padding: 26px 16px; text-align: center; color: var(--text-muted); font-size: 12.5px;
+  border: 1px dashed var(--border); border-radius: 10px; background: #f8fafc;
+}
+
+/* ─── KPI strip ──────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-tile {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); padding: 16px 18px; position: relative; overflow: hidden;
+}
+.kpi-tile::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent, var(--blue));
+}
+.kpi-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); }
+.kpi-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.2; margin-top: 6px; }
+.kpi-trend { font-size: 11.5px; font-weight: 600; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.kpi-trend.up { color: #b45309; }
+.kpi-trend.down { color: #0369a1; }
+
+/* ─── Bar chart (CSS columns, no chart library) ─────────────── */
+.bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 150px; padding: 6px 2px 0; }
+.bar-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.bar-col .bar {
+  width: 100%; max-width: 22px; background: linear-gradient(180deg, #60a5fa, #2563eb);
+  border-radius: 4px 4px 1px 1px; min-height: 2px; transition: height .3s ease;
+}
+.bar-col .bar-val { font-size: 9.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; }
+.bar-col .bar-label { font-size: 9px; color: var(--text-muted); margin-top: 6px; white-space: nowrap; }
+
+/* ─── Section header ─────────────────────────────────────── */
+.section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.section-head h2 { font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+.section-sub { font-size: 11.5px; color: var(--text-muted); }
+
+/* ─── Breakdown bars (severity / status) ─────────────────── */
+.breakdown-row { display: grid; grid-template-columns: 80px 1fr 30px; align-items: center; gap: 10px; padding: 6px 0; }
+.breakdown-row .bd-label { font-size: 12px; font-weight: 600; color: var(--text); text-transform: capitalize; }
+.breakdown-row small { text-align: right; font-weight: 700; color: var(--text); font-size: 12px; }
+.bd-bar { height: 9px; border-radius: 999px; background: #f1f5f9; border: 1px solid var(--border); overflow: hidden; }
+.bd-fill { height: 100%; border-radius: 999px; transition: width .24s ease; }
+.bd-fill.sev-high, .bd-fill.sev-critical { background: #ef4444; }
+.bd-fill.sev-medium { background: #f59e0b; }
+.bd-fill.sev-low { background: #22c55e; }
+.bd-fill.sev-unknown { background: #94a3b8; }
+.bd-fill.st-active { background: #ef4444; }
+.bd-fill.st-inprogress { background: #f59e0b; }
+.bd-fill.st-resolved { background: #22c55e; }
+.bd-fill.st-unknown { background: #94a3b8; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body style="visibility:hidden">
+
+<!-- ══ SIDEBAR ════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-wrap">
+      <div class="logo-box">🚩</div>
+      <div>
+        <div class="logo-name">RedFlagged</div>
+        <div class="logo-tag">Security Dashboard</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Monitoring</div>
+    <a href="/overview" class="nav-item active">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="/" class="nav-item">
+      <span class="nav-icon">🚨</span>
+      <span class="nav-label">Incidents</span>
+    </a>
+    <a href="/report" class="nav-item">
+      <span class="nav-icon">📄</span>
+      <span class="nav-label">Report</span>
+    </a>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Zscaler integration — deployment in progress">
+      <span class="nav-icon">🔒</span>
+      <span class="nav-label">Zscaler</span>
+      <span class="nav-chip">SOON</span>
+    </div>
+    <div class="nav-group-label" id="nav-group-system" style="margin-top:14px">System</div>
+    <a href="/assignment" class="nav-item" id="nav-assignment">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Assignment</span>
+    </a>
+    <a href="/system-config" class="nav-item" id="nav-system-config">
+      <span class="nav-icon">🛠️</span>
+      <span class="nav-label">System Configuration</span>
+    </a>
+    <a href="/settings" class="nav-item" id="nav-dev-config">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Developer Config</span>
+    </a>
+    <a href="/#users" class="nav-item" id="nav-users">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">User Management</span>
+    </a>
+    <div class="nav-group-label" style="margin-top:14px">Tools</div>
+    <div class="nav-item" style="opacity:.55;cursor:default" title="Coming soon">
+      <span class="nav-icon">🏷️</span>
+      <span class="nav-label">Data Classification</span>
+      <span class="nav-chip">SOON</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUser" style="display:none">
+      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="sidebar-user-name" id="sidebarUserName"></div>
+        <div class="sidebar-user-role" id="sidebarUserRole"></div>
+      </div>
+    </div>
+    <button class="btn-signout" id="btnSignOut" style="display:none" onclick="signOut()">Sign out</button>
+    <div class="live-row"><div class="live-dot"></div><span class="live-text">Live · Graph API</span></div>
+    <div class="footer-sub">Live</div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════ -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title"><div class="topbar-title-icon">📊</div>Dashboard</div>
+      <div class="topbar-sub" id="dashMeta">Loading…</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline" id="refreshBtn" onclick="loadTrends()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="kpi-grid">
+      <div class="kpi-tile" style="--accent:#2563eb">
+        <div class="kpi-label">Total Incidents</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-trend" id="kpi-trend">vs previous 30 days</div>
+      </div>
+      <div class="kpi-tile" style="--accent:#0891b2">
+        <div class="kpi-label">Daily Average</div>
+        <div class="kpi-value" id="kpi-avg">—</div>
+        <div class="kpi-trend">incidents / day</div>
+      </div>
+      <div class="kpi-tile" style="--accent:#dc2626">
+        <div class="kpi-label">Open</div>
+        <div class="kpi-value" id="kpi-open">—</div>
+        <div class="kpi-trend">active + in progress</div>
+      </div>
+      <div class="kpi-tile" style="--accent:#16a34a">
+        <div class="kpi-label">Resolved</div>
+        <div class="kpi-value" id="kpi-resolved">—</div>
+        <div class="kpi-trend">last 30 days</div>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="section-head"><h2>Daily Incidents Received</h2><span class="section-sub">Last 30 days</span></div>
+        <div id="chart-daily" class="bar-chart"><div class="empty-note">Loading…</div></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Monthly Incidents Received</h2><span class="section-sub">Last 12 months</span></div>
+        <div id="chart-monthly" class="bar-chart"><div class="empty-note">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="section-head"><h2>Severity Breakdown</h2><span class="section-sub">Last 30 days</span></div>
+        <div id="breakdown-severity" style="margin-top:10px"><div class="empty-note">Loading…</div></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Status Breakdown</h2><span class="section-sub">Last 30 days</span></div>
+        <div id="breakdown-status" style="margin-top:10px"><div class="empty-note">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="font-size:15px;font-weight:700;">Data Classification</h2>
+        <span class="badge-soon">Soon</span>
+      </div>
+      <div class="placeholder-box" style="margin-top:12px">
+        Sensitive-data classification breakdown (SITs, labels, data types) will appear here once this feature ships.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function formatTrendDay(dayStr) {
+  const d = new Date(dayStr + 'T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return dayStr;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(d);
+}
+
+function formatTrendMonth(monthStr) {
+  const d = new Date(monthStr + '-01T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return monthStr;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(d);
+}
+
+function renderBarChart(containerEl, items, labelKey, formatLabel, labelEveryN) {
+  if (!containerEl) return;
+  if (!items || !items.length) {
+    containerEl.innerHTML = '<div class="empty-note">No incidents recorded yet.</div>';
+    return;
+  }
+  const maxCount = Math.max.apply(null, items.map(function (item) { return item.count; }).concat([1]));
+  containerEl.innerHTML = items.map(function (item, i) {
+    const pct = Math.max(Math.round((item.count / maxCount) * 100), item.count > 0 ? 6 : 0);
+    const showLabel = !labelEveryN || i % labelEveryN === 0 || i === items.length - 1;
+    const label = showLabel ? (formatLabel ? formatLabel(item[labelKey]) : item[labelKey]) : '';
+    return (
+      '<div class="bar-col" title="' + (formatLabel ? formatLabel(item[labelKey]) : item[labelKey]) + ': ' + item.count + '">' +
+        (item.count > 0 ? '<div class="bar-val">' + item.count + '</div>' : '') +
+        '<div class="bar" style="height:' + pct + '%"></div>' +
+        '<div class="bar-label">' + label + '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function renderBreakdown(containerEl, items, labelKey, classPrefix) {
+  if (!containerEl) return;
+  if (!items || !items.length) {
+    containerEl.innerHTML = '<div class="empty-note">No incidents recorded yet.</div>';
+    return;
+  }
+  const total = items.reduce(function (s, item) { return s + item.count; }, 0) || 1;
+  containerEl.innerHTML = items.slice().sort(function (a, b) { return b.count - a.count; }).map(function (item) {
+    const label = String(item[labelKey] || 'Unknown');
+    const cls = classPrefix + '-' + label.toLowerCase().replace(/[^a-z]/g, '');
+    const pct = Math.round((item.count / total) * 100);
+    return (
+      '<div class="breakdown-row">' +
+        '<span class="bd-label">' + label + '</span>' +
+        '<div class="bd-bar"><div class="bd-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+        '<small>' + item.count + '</small>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+async function loadTrends() {
+  const dailyEl = document.getElementById('chart-daily');
+  const monthlyEl = document.getElementById('chart-monthly');
+  const sevEl = document.getElementById('breakdown-severity');
+  const statusEl = document.getElementById('breakdown-status');
+  const metaEl = document.getElementById('dashMeta');
+  try {
+    const resp = await fetch('/api/report/trends').then(function (r) { return r.json(); });
+    if (!resp.ok) throw new Error(resp.error || 'Failed to load trends.');
+
+    renderBarChart(dailyEl, resp.daily, 'date', formatTrendDay, 5);
+    renderBarChart(monthlyEl, resp.monthly, 'month', formatTrendMonth, 1);
+    renderBreakdown(sevEl, resp.severity, 'severity', 'sev');
+    renderBreakdown(statusEl, resp.status, 'status', 'st');
+
+    const total = resp.total_30d || 0;
+    const prev = resp.prev_30d || 0;
+    document.getElementById('kpi-total').textContent = String(total);
+    document.getElementById('kpi-avg').textContent = (total / 30).toFixed(1);
+
+    const openCount = (resp.status || []).reduce(function (s, st) {
+      const label = String(st.status || '').toLowerCase();
+      return (label === 'resolved' || label === 'closed') ? s : s + st.count;
+    }, 0);
+    const resolvedCount = (resp.status || []).reduce(function (s, st) {
+      const label = String(st.status || '').toLowerCase();
+      return (label === 'resolved' || label === 'closed') ? s + st.count : s;
+    }, 0);
+    document.getElementById('kpi-open').textContent = String(openCount);
+    document.getElementById('kpi-resolved').textContent = String(resolvedCount);
+
+    const trendEl = document.getElementById('kpi-trend');
+    if (prev > 0) {
+      const deltaPct = Math.round(((total - prev) / prev) * 100);
+      const arrow = deltaPct > 0 ? '▲' : (deltaPct < 0 ? '▼' : '—');
+      trendEl.className = 'kpi-trend' + (deltaPct > 0 ? ' up' : (deltaPct < 0 ? ' down' : ''));
+      trendEl.textContent = arrow + ' ' + Math.abs(deltaPct) + '% vs previous 30 days';
+    } else {
+      trendEl.textContent = 'vs previous 30 days (' + prev + ')';
+    }
+
+    metaEl.textContent = total + ' incidents received in the last 30 days';
+  } catch (e) {
+    [dailyEl, monthlyEl, sevEl, statusEl].forEach(function (el) {
+      if (el) el.innerHTML = '<div class="empty-note">Could not load data.</div>';
+    });
+    if (metaEl) metaEl.textContent = 'Could not load dashboard data.';
+  }
+}
+
+// ── Auth ───────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (resp.status === 401) { window.location.href = '/login'; return false; }
+    const d = await resp.json();
+    if (!d.ok) { window.location.href = '/login'; return false; }
+    _applyUserUI(d.user);
+    document.body.style.visibility = '';
+    return true;
+  } catch (_) { window.location.href = '/login'; return false; }
+}
+function _applyUserUI(user) {
+  const initials = (user.display_name || user.email || '?').trim().charAt(0).toUpperCase();
+  document.getElementById('sidebarAvatar').textContent   = initials;
+  document.getElementById('sidebarUserName').textContent = user.display_name || user.email;
+  document.getElementById('sidebarUserRole').textContent = user.role;
+  document.getElementById('sidebarUser').style.display   = '';
+  document.getElementById('btnSignOut').style.display    = '';
+  const canSystem    = user.role === 'admin' || user.role === 'developer';
+  const canDevConfig = user.role === 'developer';
+  const canUserMgmt  = user.role === 'admin' || user.role === 'developer';
+  ['nav-group-system','nav-assignment','nav-system-config'].forEach(function (id) {
+    var el = document.getElementById(id); if (el) el.style.display = canSystem ? '' : 'none';
+  });
+  var dev = document.getElementById('nav-dev-config'); if (dev) dev.style.display = canDevConfig ? '' : 'none';
+  var usr = document.getElementById('nav-users'); if (usr) usr.style.display = canUserMgmt ? '' : 'none';
+}
+async function signOut() {
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: '{}' }); } catch (_) {}
+  window.location.href = '/login';
+}
+
+(async function boot() {
+  const ok = await checkAuth();
+  if (ok) loadTrends();
+}());
+</script>
+</body>
+</html>

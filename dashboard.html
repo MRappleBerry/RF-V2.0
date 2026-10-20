@@ -298,6 +298,35 @@
               <div class="chart-row"><span>False Positive</span><div class="chart-bar"><div id="class-chart-false-positive" class="chart-fill bad"></div></div><small id="class-chart-false-positive-count">0</small></div>
               <div class="chart-row"><span>Benign</span><div class="chart-bar"><div id="class-chart-benign" class="chart-fill warn"></div></div><small id="class-chart-benign-count">0</small></div>
             </div>
+            <div class="executive-detail-grid" style="margin-top: 12px;">
+              <div class="executive-chart-card">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+                  <h3 style="margin:0;">Daily Incidents Received</h3>
+                  <small class="mono" style="color: var(--muted);">Last 30 days</small>
+                </div>
+                <div id="trend-daily-rows" class="trend-rows">
+                  <div class="incident-empty">Loading…</div>
+                </div>
+              </div>
+              <div class="executive-chart-card">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+                  <h3 style="margin:0;">Monthly Incidents Received</h3>
+                  <small class="mono" style="color: var(--muted);">Last 12 months</small>
+                </div>
+                <div id="trend-monthly-rows" class="trend-rows">
+                  <div class="incident-empty">Loading…</div>
+                </div>
+              </div>
+            </div>
+            <div class="executive-chart-card" style="margin-top: 12px; position: relative;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <h3 style="margin:0;">Data Classification</h3>
+                <span class="badge warn" style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Soon</span>
+              </div>
+              <div class="incident-empty" style="padding: 28px 12px;">
+                Sensitive-data classification breakdown (SITs, labels, data types) will appear here once this feature ships.
+              </div>
+            </div>
             <div class="executive-chart-card" style="margin-top: 12px;">
               <h3>Classification History (Month / Year)</h3>
               <div class="executive-history-toolbar">

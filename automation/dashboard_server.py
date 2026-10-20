@@ -355,7 +355,10 @@ class AutomationManager:
 	def _process_command(self) -> list[str]:
 		return [sys.executable, "-u", str(self.tools_path)]
 
-	def _incident_resolve_command(self, incident_id: str, status: str, classification: str, determination: str, comment: str) -> list[str]:
+	def _incident_resolve_command(
+		self, incident_id: str, status: str, classification: str, determination: str, comment: str,
+		assigned_to: str = "", snow_tickets: str = "", resolution_code: str = "", caller_email: str = "",
+	) -> list[str]:
 		command = [
 			sys.executable,
 			"-u",
@@ -371,6 +374,14 @@ class AutomationManager:
 			command.extend(["--determination", determination])
 		if comment:
 			command.extend(["--comment", comment])
+		if assigned_to:
+			command.extend(["--assigned-to", assigned_to])
+		if snow_tickets:
+			command.extend(["--snow-tickets", snow_tickets])
+		if resolution_code:
+			command.extend(["--resolution-code", resolution_code])
+		if caller_email:
+			command.extend(["--caller-email", caller_email])
 		return command
 
 	def start_process(self, source: str = "manual") -> tuple[bool, dict[str, Any]]:
@@ -433,6 +444,10 @@ class AutomationManager:
 		classification: Any = "",
 		determination: Any = "",
 		comment: Any = "",
+		assigned_to: Any = "",
+		snow_tickets: Any = "",
+		resolution_code: Any = "",
+		caller_email: Any = "",
 	) -> tuple[bool, dict[str, Any]]:
 		normalized_incident_id = str(incident_id or "").strip()
 		if not normalized_incident_id:
@@ -441,6 +456,10 @@ class AutomationManager:
 		normalized_classification = str(classification or "").strip()
 		normalized_determination = str(determination or "").strip()
 		normalized_comment = str(comment or "").strip()
+		normalized_assigned_to = str(assigned_to or "").strip()
+		normalized_snow_tickets = str(snow_tickets or "").strip()
+		normalized_resolution_code = str(resolution_code or "").strip()
+		normalized_caller_email = str(caller_email or "").strip()
 
 		with self.lock:
 			if not self.incident_resolved_path.is_file():
@@ -471,6 +490,10 @@ class AutomationManager:
 					normalized_classification,
 					normalized_determination,
 					normalized_comment,
+					normalized_assigned_to,
+					normalized_snow_tickets,
+					normalized_resolution_code,
+					normalized_caller_email,
 				),
 				cwd=str(self.root),
 				stdout=subprocess.PIPE,
@@ -972,6 +995,30 @@ def _load_flask_api_creds() -> None:
     _snow2.init()
 
 
+def _snow_identity_for_user(root: Path, current_user) -> tuple[str, str]:
+    """Return (snow_email, defender_email) for a RedFlagged session user.
+
+    Developer-role sessions, and the "Microsoft CDX" demo-tenant admin identity
+    (not a real individual analyst), use the shared RedFlagged Service ServiceNow
+    account instead of showing up as themselves on tickets. Defender assignment
+    always uses the session's own Microsoft account.
+    """
+    use_service_account = (
+        current_user.role == "developer"
+        or (current_user.display_name or "").strip().lower() == "microsoft cdx"
+    )
+    if use_service_account:
+        _svc_file = root / "data" / "system_settings.json"
+        try:
+            _svc_data = json.loads(_svc_file.read_text(encoding="utf-8")) if _svc_file.is_file() else {}
+            snow_email = _svc_data.get("developer_service_account_email", "rf_service@redflagged.local")
+        except Exception:
+            snow_email = "rf_service@redflagged.local"
+    else:
+        snow_email = current_user.email
+    return snow_email, current_user.email
+
+
 # ── ServiceNow ticket persistence (per-alert, written by "Add to Database") ───
 def _snow_report_db_path(root: Path) -> Path:
     return root / "redflagged.db"
@@ -989,10 +1036,16 @@ def _snow_report_db_connect(root: Path):
             snow_sys_id         TEXT,
             snow_parent_ticket  TEXT,
             snow_parent_sys_id  TEXT,
+            ticket_type         TEXT,
             added_at            TEXT
         )
         """
     )
+    try:
+        con.execute("ALTER TABLE snow_report_tickets ADD COLUMN ticket_type TEXT")
+    except Exception:
+        pass  # column already exists
+    con.execute("UPDATE snow_report_tickets SET ticket_type = 'child' WHERE ticket_type IS NULL")
     con.execute(
         """
         CREATE TABLE IF NOT EXISTS dlp_report (
@@ -3188,14 +3241,25 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					snow_by_alert_id: dict[str, str] = {}
 					_rp_con = _snow_report_db_connect(root)
 					try:
-						for _rd_row in _rp_con.execute("SELECT alert_id, snow_ticket FROM snow_report_tickets"):
+						for _rd_row in _rp_con.execute("SELECT alert_id, snow_ticket FROM snow_report_tickets WHERE ticket_type = 'child'"):
 							snow_by_alert_id[_rd_row[0]] = _rd_row[1] or ""
-						# Manually-entered fields already on file — preserved across this refresh
-						preserved_by_alert_id: dict[str, tuple[str, str]] = {}
-						for _pr_row in _rp_con.execute("SELECT alert_id, description, resolution_notes FROM dlp_report"):
-							preserved_by_alert_id[_pr_row[0]] = (_pr_row[1] or "", _pr_row[2] or "")
+						# Resolution Notes is still manual-entry — preserved across this refresh.
+						# Description now comes live from the ServiceNow ticket (below), so it's
+						# no longer a manually-preserved field.
+						preserved_notes_by_alert_id: dict[str, str] = {}
+						for _pr_row in _rp_con.execute("SELECT alert_id, resolution_notes FROM dlp_report"):
+							preserved_notes_by_alert_id[_pr_row[0]] = _pr_row[1] or ""
 					except Exception:
-						preserved_by_alert_id = {}
+						preserved_notes_by_alert_id = {}
+					# Live ServiceNow ticket state + description per alert (not Defender's
+					# incident status/description — these columns mean the SNOW ticket's own
+					# field values).
+					snow_fields_by_ticket: dict[str, dict[str, str]] = {}
+					try:
+						from clients import servicenow_client as _snow_rp
+						snow_fields_by_ticket = _snow_rp.get_fields_by_numbers(list(snow_by_alert_id.values()))
+					except Exception:
+						pass
 					for a in alerts:
 						inc_id = str(a.get("incidentId") or "")
 						inc = inc_by_id.get(inc_id, {})
@@ -3208,7 +3272,7 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 						a["_inc_createdAt"] = inc.get("createdDateTime", "")
 						a["_inc_resolvedAt"] = inc.get("resolvedDateTime", "")
 					COLS = ["Incident Ticket Number (ServiceNow)","Detection Source","Incident ID (Microsoft Defender)","Category","Urgency","Incident Severity (Microsoft Defender)","Incident Ticket Status (ServiceNow)","Title (Short Description)","Description","Date of Alert (Microsoft Defender)","Date of Alert Resolved (Microsoft Defender)","Incident Ticket Assigned To (ServiceNow)","DLP Policy","Classification","Determination","User","Email - Work","Egress Channel","Resolution Notes"]
-					AUTO_COLS = [c for c in COLS if c not in ("Description", "Resolution Notes")]
+					AUTO_COLS = [c for c in COLS if c not in ("Resolution Notes",)]
 					rows = []
 					now_iso_rp = datetime.now().astimezone().isoformat()
 					for a in alerts:
@@ -3224,17 +3288,19 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 								break
 						tl = (a.get("title") or "").lower()
 						egress = "Exchange Online" if ("exchange" in tl or "email" in tl or "mail" in tl) else ("SharePoint Online" if "sharepoint" in tl else ("OneDrive" if "onedrive" in tl else ("Endpoint Device" if "device" in tl else "")))
-						preserved_desc, preserved_notes = preserved_by_alert_id.get(alert_id_rp, ("", ""))
+						preserved_notes = preserved_notes_by_alert_id.get(alert_id_rp, "")
+						alert_ticket_number = snow_by_alert_id.get(alert_id_rp, "")
+						snow_fields = snow_fields_by_ticket.get(alert_ticket_number, {}) if alert_ticket_number else {}
 						row = {
-							"Incident Ticket Number (ServiceNow)": snow_by_alert_id.get(alert_id_rp, ""),
+							"Incident Ticket Number (ServiceNow)": alert_ticket_number,
 							"Detection Source": "Microsoft Data Loss Prevention",
 							"Incident ID (Microsoft Defender)": a.get("incidentId") or "",
 							"Category": a.get("category") or "",
 							"Urgency": (a.get("_inc_severity") or a.get("severity") or "").capitalize(),
 							"Incident Severity (Microsoft Defender)": (a.get("_inc_severity") or a.get("severity") or "").capitalize(),
-							"Incident Ticket Status (ServiceNow)": a.get("_inc_status") or a.get("status") or "",
+							"Incident Ticket Status (ServiceNow)": snow_fields.get("state", ""),
 							"Title (Short Description)": a.get("_inc_title") or a.get("title") or "",
-							"Description": preserved_desc,
+							"Description": snow_fields.get("description", ""),
 							"Date of Alert (Microsoft Defender)": a.get("createdDateTime") or "",
 							"Date of Alert Resolved (Microsoft Defender)": a.get("resolvedDateTime") or "",
 							"Incident Ticket Assigned To (ServiceNow)": a.get("_inc_assignedTo") or "",
@@ -3262,6 +3328,7 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 										severity       = excluded.severity,
 										ticket_status  = excluded.ticket_status,
 										title          = excluded.title,
+										description    = excluded.description,
 										created_at     = excluded.created_at,
 										resolved_at    = excluded.resolved_at,
 										assigned_to    = excluded.assigned_to,
@@ -3274,7 +3341,7 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 										updated_at     = excluded.updated_at
 									""",
 									(alert_id_rp, row["Incident ID (Microsoft Defender)"], row["Category"], row["Incident Severity (Microsoft Defender)"],
-									 row["Incident Ticket Status (ServiceNow)"], row["Title (Short Description)"], preserved_desc,
+									 row["Incident Ticket Status (ServiceNow)"], row["Title (Short Description)"], row["Description"],
 									 row["Date of Alert (Microsoft Defender)"], row["Date of Alert Resolved (Microsoft Defender)"], row["Incident Ticket Assigned To (ServiceNow)"],
 									 row["DLP Policy"], row["Classification"], row["Determination"], user_name, user_email, egress, preserved_notes, now_iso_rp),
 								)
@@ -3283,6 +3350,96 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					_rp_con.commit()
 					_rp_con.close()
 					self._write_json(HTTPStatus.OK, {"ok": True, "columns": COLS, "rows": rows, "auto_cols": AUTO_COLS})
+				except Exception as exc:
+					self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(exc)})
+				return
+
+			# Daily / monthly incident-received counts for the Executive dashboard,
+			# from the same dlp_report table /api/report/data keeps up to date.
+			if path == "/api/report/trends":
+				try:
+					con = _snow_report_db_connect(root)
+					try:
+						daily_rows = con.execute(
+							"""
+							SELECT date(created_at) AS day, COUNT(*) AS cnt
+							FROM dlp_report
+							WHERE created_at IS NOT NULL AND created_at != ''
+							  AND date(created_at) >= date('now', '-29 days')
+							GROUP BY day
+							ORDER BY day
+							"""
+						).fetchall()
+						monthly_rows = con.execute(
+							"""
+							SELECT strftime('%Y-%m', created_at) AS month, COUNT(*) AS cnt
+							FROM dlp_report
+							WHERE created_at IS NOT NULL AND created_at != ''
+							  AND date(created_at) >= date('now', 'start of month', '-11 months')
+							GROUP BY month
+							ORDER BY month
+							"""
+						).fetchall()
+						# Previous 30-day window, for the KPI trend arrow
+						prev_total_row = con.execute(
+							"""
+							SELECT COUNT(*) FROM dlp_report
+							WHERE created_at IS NOT NULL AND created_at != ''
+							  AND date(created_at) >= date('now', '-59 days')
+							  AND date(created_at) <  date('now', '-29 days')
+							"""
+						).fetchone()
+						severity_rows = con.execute(
+							"""
+							SELECT COALESCE(NULLIF(severity, ''), 'Unknown') AS sev, COUNT(*) AS cnt
+							FROM dlp_report
+							WHERE created_at IS NOT NULL AND created_at != ''
+							  AND date(created_at) >= date('now', '-29 days')
+							GROUP BY sev
+							"""
+						).fetchall()
+						status_rows = con.execute(
+							"""
+							SELECT COALESCE(NULLIF(ticket_status, ''), 'Unknown') AS st, COUNT(*) AS cnt
+							FROM dlp_report
+							WHERE created_at IS NOT NULL AND created_at != ''
+							  AND date(created_at) >= date('now', '-29 days')
+							GROUP BY st
+							"""
+						).fetchall()
+					finally:
+						con.close()
+					# Fill gaps so the charts show a continuous 30-day / 12-month timeline,
+					# not just the sparse days/months that happen to have incidents.
+					daily_by_day = {r[0]: r[1] for r in daily_rows}
+					today = datetime.now().date()
+					daily = []
+					for i in range(29, -1, -1):
+						d = today - timedelta(days=i)
+						key = d.isoformat()
+						daily.append({"date": key, "count": daily_by_day.get(key, 0)})
+					monthly_by_month = {r[0]: r[1] for r in monthly_rows}
+					monthly = []
+					year, month = today.year, today.month
+					for i in range(11, -1, -1):
+						m = month - i
+						y = year
+						while m <= 0:
+							m += 12
+							y -= 1
+						key = f"{y:04d}-{m:02d}"
+						monthly.append({"month": key, "count": monthly_by_month.get(key, 0)})
+					total_30d = sum(d["count"] for d in daily)
+					prev_30d = prev_total_row[0] if prev_total_row else 0
+					self._write_json(HTTPStatus.OK, {
+						"ok": True,
+						"daily": daily,
+						"monthly": monthly,
+						"total_30d": total_30d,
+						"prev_30d": prev_30d,
+						"severity": [{"severity": r[0], "count": r[1]} for r in severity_rows],
+						"status": [{"status": r[0], "count": r[1]} for r in status_rows],
+					})
 				except Exception as exc:
 					self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(exc)})
 				return
@@ -3318,6 +3475,8 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 				"/incidents.html": "incidents.html",
 				"/dashboard": "dashboard.html",
 				"/dashboard.html": "dashboard.html",
+				"/overview": "overview.html",
+				"/overview.html": "overview.html",
 				"/report": "report.html",
 				"/report.html": "report.html",
 				"/assignment": "assignment.html",
@@ -3507,19 +3666,9 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 
 					_load_flask_api_creds()
 
-					# Developer role: SNOW → RedFlagged Service; Defender → developer's MS account.
-					is_developer = (current_user.role == "developer")
-					if is_developer:
-						_svc_file = root / "data" / "system_settings.json"
-						try:
-							_svc_data = json.loads(_svc_file.read_text(encoding="utf-8")) if _svc_file.is_file() else {}
-							snow_email = _svc_data.get("developer_service_account_email", "rf_service@redflagged.local")
-						except Exception:
-							snow_email = "rf_service@redflagged.local"
-						defender_email = current_user.email
-					else:
-						snow_email = current_user.email
-						defender_email = current_user.email
+					# Developer role, and the "Microsoft CDX" demo-tenant identity, use the
+					# shared RedFlagged Service ServiceNow account; Defender uses the real MS account.
+					snow_email, defender_email = _snow_identity_for_user(root, current_user)
 
 					# ── Resolve group & user sys_id ───────────────────────────
 					_snow_inc = _snow.get_incident_by_number(snow_number)
@@ -3636,20 +3785,9 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 
 					_load_flask_api_creds()
 
-					# Developer role: SNOW reassignment uses RedFlagged Service account,
-					# Defender XDR reassignment uses the developer's own Microsoft account.
-					is_developer_r = (current_user.role == "developer")
-					if is_developer_r:
-						_svc_file_r = root / "data" / "system_settings.json"
-						try:
-							_svc_data_r = json.loads(_svc_file_r.read_text(encoding="utf-8")) if _svc_file_r.is_file() else {}
-							snow_email_r = _svc_data_r.get("developer_service_account_email", "rf_service@redflagged.local")
-						except Exception:
-							snow_email_r = "rf_service@redflagged.local"
-						defender_email_r = current_user.email
-					else:
-						snow_email_r = current_user.email
-						defender_email_r = current_user.email
+					# Developer role, and the "Microsoft CDX" demo-tenant identity, use the
+					# shared RedFlagged Service ServiceNow account; Defender uses the real MS account.
+					snow_email_r, defender_email_r = _snow_identity_for_user(root, current_user)
 
 					# allow_reassign=True skips the "already assigned" check
 					result = _av.validate(snow_number, snow_email_r, allow_reassign=True,
@@ -3782,6 +3920,19 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					self._write_json(HTTPStatus.BAD_REQUEST, {"ok": False, "message": "Incident ID is required in URL path."})
 					return
 				try:
+					# Gather this incident's ServiceNow ticket sys_ids (parent + children)
+					# so resolving the Defender incident also resolves the linked tickets.
+					_snow_tickets_csv = ""
+					try:
+						_rm_file = root / "data" / "snow_incident_map.json"
+						_rm_map = json.loads(_rm_file.read_text(encoding="utf-8")) if _rm_file.is_file() else {}
+						_rm_entry = _rm_map.get(str(incident_id_from_path)) or {}
+						_rm_sys_ids = [sid for sid in [_rm_entry.get("snow_sys_id", "")] if sid]
+						_rm_sys_ids += [c.get("sys_id", "") for c in (_rm_entry.get("children") or []) if c.get("sys_id")]
+						_snow_tickets_csv = ",".join(_rm_sys_ids)
+					except Exception:
+						pass
+					_snow_caller_email, _ = _snow_identity_for_user(root, current_user)
 					started, response_payload = manager.start_incident_resolve_process(
 						incident_id_from_path,
 						source=str(payload.get("source") or "resolve modal").strip() or "resolve modal",
@@ -3789,6 +3940,10 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 						classification=payload.get("classification"),
 						determination=payload.get("determination"),
 						comment=payload.get("comment"),
+						assigned_to=payload.get("assignedTo"),
+						snow_tickets=_snow_tickets_csv,
+						resolution_code=payload.get("resolutionCode"),
+						caller_email=_snow_caller_email,
 					)
 				except ValueError as exc:
 					self._write_json(HTTPStatus.BAD_REQUEST, {"ok": False, "message": str(exc)})
@@ -4218,6 +4373,11 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 
 			# Create ServiceNow tickets for a Defender incident
 			if path == "/api/snow-create-for-incident":
+				current_user = self._require_auth_api()
+				if current_user is None:
+					return
+				if not self._require_permission_api(current_user, "resolve"):
+					return
 				try:
 					_load_flask_api_creds()
 					import config as _cfg_snow_guard
@@ -4246,6 +4406,14 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 						groups = _snow_sc.find_group_by_name(grp_name)
 						if groups:
 							grp_sys_id = groups[0]["sys_id"]
+					# Caller — the RedFlagged session user who clicked "Create Tickets"
+					# (developer-role / "Microsoft CDX" sessions use the shared RedFlagged
+					# Service ServiceNow identity, same mapping used by Resolve/Assign).
+					_caller_email, _ = _snow_identity_for_user(root, current_user)
+					_caller_sys_id = ""
+					if _caller_email:
+						_caller_rec = _snow_sc.find_user_by_email(_caller_email)
+						_caller_sys_id = _caller_rec.get("sys_id", "")
 					# Create parent ticket — represented using the first alert's policy/user
 					# (correlated DLP alerts in one incident are typically the same policy)
 					_parent_policy, _parent_user = _snow_alert_policy_and_user(alerts[0]) if alerts else ("", "")
@@ -4257,6 +4425,7 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 						urgency=urgency,
 						impact=urgency,
 						assignment_group_sys_id=grp_sys_id,
+						caller_sys_id=_caller_sys_id,
 					)
 					parent_num = parent.get("number", "")
 					parent_sys_id = parent.get("sys_id", "")
@@ -4271,6 +4440,7 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 							urgency=urgency,
 							impact=urgency,
 							assignment_group_sys_id=grp_sys_id,
+							caller_sys_id=_caller_sys_id,
 						)
 						if child.get("sys_id") and parent_sys_id:
 							_snow_sc.link_incidents(parent_sys_id, child["sys_id"])
@@ -4325,6 +4495,26 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					try:
 						rows_written = 0
 						now_iso = datetime.now().astimezone().isoformat()
+						# One row for the parent ticket itself (no alert_id of its own —
+						# a synthetic per-incident key keeps it unique in this alert_id-keyed table).
+						parent_row_key = f"__parent__{inc_id}"
+						con.execute(
+							"""
+							INSERT INTO snow_report_tickets
+								(alert_id, incident_id, snow_ticket, snow_sys_id, snow_parent_ticket, snow_parent_sys_id, ticket_type, added_at)
+							VALUES (?, ?, ?, ?, ?, ?, 'parent', ?)
+							ON CONFLICT(alert_id) DO UPDATE SET
+								incident_id        = excluded.incident_id,
+								snow_ticket         = excluded.snow_ticket,
+								snow_sys_id         = excluded.snow_sys_id,
+								snow_parent_ticket  = excluded.snow_parent_ticket,
+								snow_parent_sys_id  = excluded.snow_parent_sys_id,
+								ticket_type         = 'parent',
+								added_at            = excluded.added_at
+							""",
+							(parent_row_key, str(inc_id), parent_ticket, parent_sys_id, parent_ticket, parent_sys_id, now_iso),
+						)
+						rows_written += 1
 						for child in children_atd:
 							alert_id = child.get("alert_id") or ""
 							if not alert_id:
@@ -4332,14 +4522,15 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 							con.execute(
 								"""
 								INSERT INTO snow_report_tickets
-									(alert_id, incident_id, snow_ticket, snow_sys_id, snow_parent_ticket, snow_parent_sys_id, added_at)
-								VALUES (?, ?, ?, ?, ?, ?, ?)
+									(alert_id, incident_id, snow_ticket, snow_sys_id, snow_parent_ticket, snow_parent_sys_id, ticket_type, added_at)
+								VALUES (?, ?, ?, ?, ?, ?, 'child', ?)
 								ON CONFLICT(alert_id) DO UPDATE SET
 									incident_id        = excluded.incident_id,
 									snow_ticket         = excluded.snow_ticket,
 									snow_sys_id         = excluded.snow_sys_id,
 									snow_parent_ticket  = excluded.snow_parent_ticket,
 									snow_parent_sys_id  = excluded.snow_parent_sys_id,
+									ticket_type         = 'child',
 									added_at            = excluded.added_at
 								""",
 								(alert_id, str(inc_id), child.get("ticket", ""), child.get("sys_id", ""), parent_ticket, parent_sys_id, now_iso),
