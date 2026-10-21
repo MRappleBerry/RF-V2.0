@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy this file to data/system_settings.json (gitignored) — no secrets in this one, just local config.",
+  "default_assignment_group": "Your ServiceNow Assignment Group Name",
+  "developer_service_account_email": "a-shared-servicenow-user@yourcompany.com"
+}

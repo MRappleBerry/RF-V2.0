@@ -1,0 +1,15 @@
+{
+  "_comment": "Copy this file to config.json (gitignored) and fill in real values. NEVER commit config.json.",
+  "active_env": "tenant",
+  "envs": {
+    "tenant": {
+      "TENANT_ID": "your-azure-ad-tenant-id",
+      "CLIENT_ID": "your-azure-app-registration-client-id",
+      "CLIENT_SECRET": "your-azure-app-registration-client-secret",
+      "SNOW_INSTANCE": "https://your-instance.service-now.com/",
+      "SNOW_USER": "your-servicenow-username",
+      "SNOW_PASSWORD": "your-servicenow-password"
+    },
+    "production": {}
+  }
+}
