@@ -1533,7 +1533,10 @@ function renderIncidentDrawer(incId) {
   }
   currentAlert = Object.assign({_type:'incident'}, inc);
   document.getElementById('drawerTitle').textContent = inc.displayName || 'Incident';
-  document.getElementById('drawerLink').href  = inc.alertWebUrl || '#';
+  // Incident objects carry incidentWebUrl, not alertWebUrl (that's alert-only) —
+  // the wrong field left this link pointing at '#', which just reopened the
+  // current RedFlagged tab instead of navigating to Defender.
+  document.getElementById('drawerLink').href  = inc.incidentWebUrl || inc.alertWebUrl || '#';
   document.getElementById('purviewLink').href = 'https://purview.microsoft.com/datalossprevention/alerts';
   document.getElementById('drawerBadges').innerHTML =
     sevBadge(inc.severity) + ' ' + statBadge(inc.status) +
