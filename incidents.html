@@ -1016,6 +1016,7 @@ tbody tr.tr-child-alert td.child-title-cell { padding-left: 42px; border-left: 3
   <!-- Tabs -->
   <div class="d-tabs">
     <div class="d-tab active" id="dtab-overview"   onclick="switchDTab('overview')">📋 Overview</div>
+    <div class="d-tab"        id="dtab-activity"    onclick="switchDTab('activity')">💬 Activity</div>
     <div class="d-tab"        id="dtab-story"       onclick="switchDTab('story')">🔴 Story</div>
     <div class="d-tab"        id="dtab-classifiers" onclick="switchDTab('classifiers')">🎯 Classifiers</div>
     <div class="d-tab"        id="dtab-artifacts"   onclick="switchDTab('artifacts')">📎 Artifacts</div>
@@ -1026,6 +1027,9 @@ tbody tr.tr-child-alert td.child-title-cell { padding-left: 42px; border-left: 3
   <!-- Body -->
   <div class="db" id="drawerBody">
     <div class="d-panel active" id="dpanel-overview">
+      <div style="text-align:center;padding:70px 20px"><div class="spinner"></div></div>
+    </div>
+    <div class="d-panel" id="dpanel-activity">
       <div style="text-align:center;padding:70px 20px"><div class="spinner"></div></div>
     </div>
     <div class="d-panel" id="dpanel-story">
@@ -1159,7 +1163,7 @@ function workloadChip(wl) {
 
 // ── Tab switching (drawer) ─────────────────────────────────
 function switchDTab(name) {
-  ['overview','story','classifiers','artifacts','report','analysis'].forEach(function(t) {
+  ['overview','activity','story','classifiers','artifacts','report','analysis'].forEach(function(t) {
     var tab = document.getElementById('dtab-' + t);
     if (tab) tab.classList.toggle('active', t === name);
     var panel = document.getElementById('dpanel-' + t);
@@ -1567,6 +1571,8 @@ function renderIncidentDrawer(incId) {
     document.getElementById('dtab-' + t).style.display = 'none';
   });
   document.getElementById('dtab-overview').style.display = '';
+  document.getElementById('dtab-activity').style.display = '';
+  renderIncidentActivity(inc.comments || []);
 
   let html = '';
   if ((inc.status || '').toLowerCase() === 'redirected') {
@@ -1881,12 +1887,16 @@ function renderAll(a) {
   // "Assigned To" row + the assign/reassign button targets if it's changed.
   (function() {
     var liveIncId = String(a._inc_id || a.incidentId || '');
-    if (!liveIncId) return;
+    if (!liveIncId) {
+      renderIncidentActivity([]);
+      return;
+    }
     fetch('/api/incidents/' + encodeURIComponent(liveIncId))
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        if (!d.ok || !d.incident) return;
+        if (!d.ok || !d.incident) { renderIncidentActivity([]); return; }
         var live = d.incident;
+        renderIncidentActivity(live.comments || []);
         var cachedA = allDlp.find(function(x) { return String(x.id) === String(a.id); });
         if (cachedA) cachedA._inc_assignedTo = live.assignedTo || '';
         if (currentAlert && String(currentAlert.id) === String(a.id)) currentAlert._inc_assignedTo = live.assignedTo || '';
@@ -1897,8 +1907,38 @@ function renderAll(a) {
           var valEl = row.querySelector('.ds-val');
           if (keyEl && valEl && keyEl.textContent.trim() === 'Assigned To') valEl.textContent = live.assignedTo || '—';
         });
-      }).catch(function() {});
+      }).catch(function() { renderIncidentActivity(null); });
   })();
+}
+
+// ── ACTIVITY TAB (Defender incident comments, via Graph) ────
+function renderIncidentActivity(comments) {
+  var el = document.getElementById('dpanel-activity');
+  if (!el) return;
+  if (comments === null) {
+    el.innerHTML = '<div class="ds"><div class="ds-body" style="color:#dc2626">Could not load activity.</div></div>';
+    return;
+  }
+  if (!comments.length) {
+    el.innerHTML = ds('💬', 'Activity',
+      '<div style="padding:4px 0;color:var(--text-muted);font-size:12.5px">No comments on this incident yet.</div>'
+    );
+    return;
+  }
+  var sorted = comments.slice().sort(function(a, b) {
+    return new Date(b.createdDateTime || 0) - new Date(a.createdDateTime || 0);
+  });
+  var rows = sorted.map(function(c) {
+    var who = (c.createdByDisplayName || 'Unknown').replace(/^API-App:/, '');
+    return '<div class="ev-block"><div class="ev-icon">💬</div><div>' +
+      '<div class="ev-name">' + esc(c.comment || '') + '</div>' +
+      '<div class="ev-sub">' + esc(who) + ' &nbsp;&middot;&nbsp; ' + fmtDate(c.createdDateTime) + '</div>' +
+      '</div></div>';
+  }).join('');
+  el.innerHTML = ds('💬', 'Activity (' + comments.length + ')', rows, false) +
+    '<div style="padding:8px 2px;color:var(--text-muted);font-size:11px;line-height:1.5">' +
+    'Shows comments from Microsoft Graph. Status/classification/assignment change entries shown in the native Defender portal are not available through the public Graph API.' +
+    '</div>';
 }
 
 // ── OVERVIEW TAB ───────────────────────────────────────────
