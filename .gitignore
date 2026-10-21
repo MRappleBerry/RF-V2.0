@@ -9,6 +9,7 @@ config.json
 data/analysts.json
 data/assignment_log.json
 data/system_settings.json
+data/servicenow_user_map.json
 .claude/
 
 # Legacy debug/run logs (operational clutter, reference real internal URLs/filenames)

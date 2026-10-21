@@ -944,6 +944,19 @@ tbody tr.tr-child-alert td.child-title-cell { padding-left: 42px; border-left: 3
     </div>
   </div>
 
+  <!-- ServiceNow Determination -->
+  <div class="settings-section">
+    <div class="settings-section-head">
+      <div class="settings-section-title">ServiceNow Determination</div>
+      <div class="settings-section-desc">Set which ServiceNow account each user is assigned as when they resolve or create tickets. Leave blank to use their RedFlagged login email by default.</div>
+    </div>
+    <div class="settings-section-body" style="padding:0">
+      <div id="snowDetWrap">
+        <div class="members-empty">Open this tab to load users.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ SETTINGS PANEL ════════════════════════════════════ -->
@@ -4592,6 +4605,61 @@ async function toggleUserActive(email, eid, makeActive) {
   }
 }
 
+async function loadSnowDetermination() {
+  const wrap = document.getElementById('snowDetWrap');
+  wrap.innerHTML = '<div class="members-empty"><div class="spinner" style="margin:0 auto 10px"></div>Loading…</div>';
+  try {
+    const resp = await fetch('/api/users/snow-assignment', { credentials: 'same-origin' });
+    const d = await resp.json();
+    if (!d.ok || !d.users || !d.users.length) {
+      wrap.innerHTML = '<div class="members-empty">No users found.</div>';
+      return;
+    }
+    const rows = d.users.map(function(u) {
+      const eid = 'snowdet-' + btoa(u.email || '').replace(/=/g,'');
+      return '<tr>' +
+        '<td>' + _esc(u.display_name || '—') + '</td>' +
+        '<td style="font-size:12px">' + _esc(u.email || '—') + '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<input id="' + eid + '" type="text" placeholder="' + _esc(u.email || '') + ' (default)" value="' + _esc(u.snow_assignee || '') +
+          '" style="font-size:12px;padding:3px 8px;border-radius:4px;border:1px solid #334155;background:#1e293b;color:#f1f5f9;width:240px;margin-right:6px">' +
+          '<button onclick="saveSnowAssignment(\'' + (u.email||'') + '\',\'' + eid + '\')" style="font-size:11px;padding:2px 10px;border-radius:4px;background:#1d4ed8;color:#fff;border:none;cursor:pointer">Save</button>' +
+          '<span id="snowdetmsg-' + eid + '" style="font-size:10px;margin-left:6px"></span>' +
+        '</td>' +
+        '</tr>';
+    }).join('');
+    wrap.innerHTML =
+      '<table class="members-table"><thead><tr>' +
+      '<th>Name</th><th>Username / Email</th><th>ServiceNow Assignee</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  } catch (e) {
+    wrap.innerHTML = '<div class="members-empty" style="color:#dc2626">Error: ' + _esc(e.message) + '</div>';
+  }
+}
+
+async function saveSnowAssignment(email, eid) {
+  const input = document.getElementById(eid);
+  const msg = document.getElementById('snowdetmsg-' + eid);
+  if (!input) return;
+  msg.textContent = 'Saving…'; msg.style.color = '#64748b';
+  try {
+    const resp = await fetch('/api/users/snow-assignment', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, snow_assignee: input.value.trim() }),
+    });
+    const d = await resp.json();
+    if (d.ok) {
+      msg.textContent = '✓ Saved'; msg.style.color = '#15803d';
+      setTimeout(function() { msg.textContent = ''; }, 2000);
+    } else {
+      msg.textContent = d.message || 'Failed'; msg.style.color = '#dc2626';
+    }
+  } catch (e) {
+    msg.textContent = 'Error'; msg.style.color = '#dc2626';
+  }
+}
+
 // ── Boot ───────────────────────────────────────────────────
 (async function boot() {
   const ok = await checkAuth();
@@ -5456,7 +5524,7 @@ function showPanel(name) {
   const navUsers = document.getElementById('nav-users');
   if (navUsers) navUsers.classList.toggle('active', isUsers);
   if (isSettings) _initSettingsPanel();
-  if (isUsers) loadUsersTable();
+  if (isUsers) { loadUsersTable(); loadSnowDetermination(); }
 }
 
 async function _initSettingsPanel() {

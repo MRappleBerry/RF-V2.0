@@ -1,0 +1,4 @@
+{
+  "_comment": "Copy this file to data/servicenow_user_map.json (gitignored). Maps a RedFlagged login email (lowercase) to the ServiceNow account that should be used as Caller/Assigned To for that person. Edit from the app's User Management > ServiceNow Determination panel instead of by hand.",
+  "analyst@example.com": "analyst@yourcompany.service-now-login.com"
+}

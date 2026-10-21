@@ -995,14 +995,40 @@ def _load_flask_api_creds() -> None:
     _snow2.init()
 
 
+def _snow_user_map_path(root: Path) -> Path:
+    return root / "data" / "servicenow_user_map.json"
+
+
+def _load_snow_user_map(root: Path) -> dict:
+    p = _snow_user_map_path(root)
+    try:
+        return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+    except Exception:
+        return {}
+
+
+def _save_snow_user_map(root: Path, mapping: dict) -> None:
+    p = _snow_user_map_path(root)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(mapping, indent=2) + "\n", encoding="utf-8")
+
+
 def _snow_identity_for_user(root: Path, current_user) -> tuple[str, str]:
     """Return (snow_email, defender_email) for a RedFlagged session user.
 
-    Developer-role sessions, and the "Microsoft CDX" demo-tenant admin identity
+    An admin-configured override (data/servicenow_user_map.json, set from the
+    User Management → ServiceNow Determination panel) takes priority — it
+    lets an admin point a RedFlagged login at a different ServiceNow account
+    (e.g. the two use different email addresses). Falling back from there:
+    developer-role sessions, and the "Microsoft CDX" demo-tenant admin identity
     (not a real individual analyst), use the shared RedFlagged Service ServiceNow
     account instead of showing up as themselves on tickets. Defender assignment
     always uses the session's own Microsoft account.
     """
+    _override = (_load_snow_user_map(root).get((current_user.email or "").strip().lower(), "") or "").strip()
+    if _override:
+        return _override, current_user.email
+
     use_service_account = (
         current_user.role == "developer"
         or (current_user.display_name or "").strip().lower() == "microsoft cdx"
@@ -2454,6 +2480,27 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					self._write_json(HTTPStatus.OK, {"ok": True, "users": safe})
 				except Exception as exc:
 					self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "message": str(exc)})
+				return
+
+			if path == "/api/users/snow-assignment":
+				user = self._require_auth_api()
+				if user is None:
+					return
+				if not self._require_permission_api(user, "configure"):
+					return
+				users_file = root / "data" / "users.json"
+				try:
+					raw = json.loads(users_file.read_text(encoding="utf-8")).get("users", []) if users_file.is_file() else []
+				except Exception:
+					raw = []
+				_map = _load_snow_user_map(root)
+				out = [{
+					"email": u.get("email", ""),
+					"display_name": u.get("display_name", ""),
+					"role": u.get("role", ""),
+					"snow_assignee": _map.get((u.get("email", "") or "").strip().lower(), ""),
+				} for u in raw]
+				self._write_json(HTTPStatus.OK, {"ok": True, "users": out})
 				return
 
 			# Serve standalone pages
@@ -4212,6 +4259,29 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 						return
 					matched["role"] = role
 					users_file.write_text(json.dumps({"users": existing}, indent=2) + "\n", encoding="utf-8")
+					self._write_json(HTTPStatus.OK, {"ok": True})
+				except Exception as exc:
+					self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "message": str(exc)})
+				return
+
+			if path == "/api/users/snow-assignment":
+				user = self._require_auth_api()
+				if user is None:
+					return
+				if not self._require_permission_api(user, "configure"):
+					return
+				email = str(payload.get("email") or "").strip().lower()
+				snow_assignee = str(payload.get("snow_assignee") or "").strip()
+				if not email:
+					self._write_json(HTTPStatus.BAD_REQUEST, {"ok": False, "message": "Email is required."})
+					return
+				try:
+					mapping = _load_snow_user_map(root)
+					if snow_assignee:
+						mapping[email] = snow_assignee
+					else:
+						mapping.pop(email, None)
+					_save_snow_user_map(root, mapping)
 					self._write_json(HTTPStatus.OK, {"ok": True})
 				except Exception as exc:
 					self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "message": str(exc)})
