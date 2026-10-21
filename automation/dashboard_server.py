@@ -2683,6 +2683,17 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					self._write_json(HTTPStatus.OK, {"ok": False, "error": str(exc), "incidents": []})
 				return
 
+			if path.startswith("/api/incidents/") and path.count("/") == 3:
+				inc_id = path.rsplit("/", 1)[-1]
+				try:
+					_load_flask_api_creds()
+					from clients import defender_client as _dc
+					incident = _dc.get_incident(inc_id)
+					self._write_json(HTTPStatus.OK, {"ok": True, "incident": incident})
+				except Exception as exc:
+					self._write_json(HTTPStatus.OK, {"ok": False, "error": str(exc)})
+				return
+
 			if path == "/api/dlp-alerts":
 				try:
 					_load_flask_api_creds()

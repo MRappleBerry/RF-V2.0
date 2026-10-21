@@ -1568,7 +1568,16 @@ function renderIncidentDrawer(incId) {
   });
   document.getElementById('dtab-overview').style.display = '';
 
-  let html = ds('📋', 'Incident Overview',
+  let html = '';
+  if ((inc.status || '').toLowerCase() === 'redirected') {
+    html += '<div class="ds" style="border-left:3px solid #d97706;background:#fffbeb;margin-bottom:12px">' +
+      '<div class="ds-body" style="padding:12px 14px;color:#92400e;font-size:12.5px;line-height:1.5">' +
+      '⚠ <strong>Redirected incident.</strong> Microsoft Defender has merged this incident into a related one as a duplicate. ' +
+      'Assignment, classification and resolution changes made here will not actually persist in Defender (Graph accepts the request but silently discards it). ' +
+      'Use the related incident below instead.' +
+      '</div></div>';
+  }
+  html += ds('📋', 'Incident Overview',
     drow('Incident Name', esc(inc.displayName || '—')) +
     drow('Severity',      sevBadge(inc.severity)) +
     drow('Status',        statBadge(inc.status)) +
@@ -1601,6 +1610,32 @@ function renderIncidentDrawer(incId) {
   );
 
   document.getElementById('dpanel-overview').innerHTML = html;
+
+  // The render above used whatever was cached in allInc, which can be stale
+  // (e.g. the incident was assigned/resolved directly in Defender, outside
+  // this app). Re-fetch this one incident live and patch the Assigned
+  // To / Status rows + cache in place if either drifted.
+  (function() {
+    var liveIncId = incId;
+    fetch('/api/incidents/' + encodeURIComponent(liveIncId))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok || !d.incident) return;
+        var live = d.incident;
+        var cached = allInc.find(function(x) { return x.id === liveIncId; });
+        if (cached) { cached.assignedTo = live.assignedTo || ''; cached.status = live.status || cached.status; }
+        var overviewEl = document.getElementById('dpanel-overview');
+        if (!overviewEl || !document.getElementById('drawer').classList.contains('open')) return;
+        if (currentAlert && currentAlert.id === liveIncId) currentAlert.assignedTo = live.assignedTo || '';
+        overviewEl.querySelectorAll('.ds-row').forEach(function(row) {
+          var keyEl = row.querySelector('.ds-key');
+          var valEl = row.querySelector('.ds-val');
+          if (!keyEl || !valEl) return;
+          if (keyEl.textContent.trim() === 'Assigned To') valEl.textContent = live.assignedTo || '—';
+          if (keyEl.textContent.trim() === 'Status' && live.status) valEl.innerHTML = statBadge(live.status);
+        });
+      }).catch(function() {});
+  })();
 
   // Async: populate ServiceNow parent + child tree
   (function() {
@@ -5374,6 +5409,20 @@ function openResolveModal() {
   rmToggleComment();
   document.getElementById('resolveBackdrop').classList.add('show');
   setTimeout(function() { document.getElementById('rm-comment').focus(); }, 200);
+  if (incId && inc._type === 'incident') {
+    // The pre-fill above used whatever was last cached in allInc, which can be
+    // stale (e.g. assigned in Defender directly, outside this app). Re-fetch
+    // this one incident live and correct the Assign To field if it's changed.
+    fetch('/api/incidents/' + encodeURIComponent(incId))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok || !d.incident || resolveModalIncId !== incId) return;
+        var live = d.incident;
+        document.getElementById('rm-assignedTo').value = live.assignedTo || '';
+        var cached = allInc.find(function(x) { return x.id === incId; });
+        if (cached) cached.assignedTo = live.assignedTo || '';
+      }).catch(function() {});
+  }
   if (incId) {
     // Pre-fill ServiceNow ticket number
     fetch('/api/snow-status?inc_id=' + encodeURIComponent(incId))
