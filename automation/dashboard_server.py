@@ -40,6 +40,11 @@ SCHEDULE_TRIGGER_WINDOW_SECONDS = 75
 
 
 def workspace_root() -> Path:
+	# In a PyInstaller-frozen build, __file__ resolves inside the bundle, not
+	# somewhere config.json/data/ can live persistently — use the folder that
+	# holds the running .exe instead (where the build script places them).
+	if getattr(sys, "frozen", False):
+		return Path(sys.executable).resolve().parent
 	return Path(__file__).resolve().parents[1]
 
 
@@ -73,8 +78,14 @@ class AutomationManager:
 	def __init__(self, root: Path) -> None:
 		self.root = root
 		self.dashboard_server_path = self.root / "automation" / "dashboard_server.py"
-		self.tools_path = self.root / "pipeline" / "runner.py"
-		self.incident_resolved_path = self.root / "pipeline" / "incident_resolver.py"
+		# A packaged build ships the runner/resolver as their own sibling .exe
+		# (see build/ script) instead of .py files run under a python.exe.
+		if getattr(sys, "frozen", False):
+			self.tools_path = self.root / "RedFlagged-Runner.exe"
+			self.incident_resolved_path = self.root / "RedFlagged-IncidentResolver.exe"
+		else:
+			self.tools_path = self.root / "pipeline" / "runner.py"
+			self.incident_resolved_path = self.root / "pipeline" / "incident_resolver.py"
 		self.schedule_path = self.root / "automation" / "system_config_schedule.json"
 		self.artifacts_root = self.root / "artifacts"
 		self.artifact_inventory_path = self.root / "automation" / "artifacts_inventory.json"
@@ -353,19 +364,24 @@ class AutomationManager:
 			self.subscribers.discard(subscriber)
 
 	def _process_command(self) -> list[str]:
+		if getattr(sys, "frozen", False):
+			return [str(self.tools_path)]
 		return [sys.executable, "-u", str(self.tools_path)]
 
 	def _incident_resolve_command(
 		self, incident_id: str, status: str, classification: str, determination: str, comment: str,
 		assigned_to: str = "", snow_tickets: str = "", resolution_code: str = "", caller_email: str = "",
 	) -> list[str]:
-		command = [
-			sys.executable,
-			"-u",
-			str(self.incident_resolved_path),
-			"--incident-id",
-			incident_id,
-		]
+		if getattr(sys, "frozen", False):
+			command = [str(self.incident_resolved_path), "--incident-id", incident_id]
+		else:
+			command = [
+				sys.executable,
+				"-u",
+				str(self.incident_resolved_path),
+				"--incident-id",
+				incident_id,
+			]
 		if status:
 			command.extend(["--status", status])
 		if classification:
@@ -969,7 +985,7 @@ def _load_flask_api_creds() -> None:
             return {}
 
     # Try root/config.json first (written by the Settings page)
-    _root_cfg = Path(__file__).parent.parent / "config.json"
+    _root_cfg = workspace_root() / "config.json"
     if _root_cfg.is_file():
         _env_cfg = _read_config_json(_root_cfg)
 

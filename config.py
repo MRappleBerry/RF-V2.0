@@ -26,17 +26,24 @@ Local dev .env fallback (never commit this file):
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
+
+# ── paths ─────────────────────────────────────────────────────────────────────
+# In a PyInstaller-frozen build there is no repo checkout — config.json, .env,
+# data/, etc. live next to the running .exe instead of next to this source file.
+if getattr(sys, "frozen", False):
+    WORKSPACE_ROOT = Path(sys.executable).resolve().parent
+else:
+    WORKSPACE_ROOT = Path(__file__).parent
 
 # ── optional dotenv for local dev ────────────────────────────────────────────
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent / ".env")
+    load_dotenv(WORKSPACE_ROOT / ".env")
 except ImportError:
     pass
 
-# ── paths ─────────────────────────────────────────────────────────────────────
-WORKSPACE_ROOT      = Path(__file__).parent
 ARTIFACTS_ROOT      = WORKSPACE_ROOT / "artifacts"
 INVENTORY_PATH      = WORKSPACE_ROOT / "automation" / "artifacts_inventory.json"
 ARTIFACT_CACHE_PATH = WORKSPACE_ROOT / "js" / "artifactData.js"

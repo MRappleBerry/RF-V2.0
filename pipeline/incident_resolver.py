@@ -25,8 +25,14 @@ import sys
 import time
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
+# In a PyInstaller-frozen build (packaged as its own sibling .exe next to
+# RedFlagged.exe) config.json/data/ live beside the running exe, not beside
+# this source file.
+if getattr(sys, "frozen", False):
+	_REPO_ROOT = Path(sys.executable).resolve().parent
+else:
+	_REPO_ROOT = Path(__file__).resolve().parent.parent
+	sys.path.insert(0, str(_REPO_ROOT))
 
 import auth.token_manager as token_manager
 from clients import defender_client

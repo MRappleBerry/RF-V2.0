@@ -12,6 +12,12 @@ data/system_settings.json
 data/servicenow_user_map.json
 .claude/
 
+# PyInstaller standalone-exe build output (scripts/build_exe.py)
+build_tmp/
+build_output/
+dist/
+*.spec
+
 # Legacy debug/run logs (operational clutter, reference real internal URLs/filenames)
 automation_output.txt
 debug_run.log

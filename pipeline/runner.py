@@ -17,8 +17,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Ensure the repo root is on the path when run as a subprocess
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Ensure the repo root is on the path when run as a subprocess (not needed —
+# and not meaningful — in a PyInstaller-frozen build, where imports are
+# already bundled statically).
+if not getattr(sys, "frozen", False):
+    sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 import auth.token_manager as token_manager
