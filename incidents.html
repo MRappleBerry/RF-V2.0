@@ -1874,6 +1874,31 @@ function renderAll(a) {
   renderArtifacts(a, add, ev, wl);
   renderReport(a, add, ev, wl);
   renderAnalysis(a, add, ev, wl);
+
+  // The drawer above used the DLP alert's own cached _inc_* fields (set
+  // server-side the last time /api/dlp-alerts ran), which can be stale.
+  // Re-fetch the underlying Defender incident live and correct the
+  // "Assigned To" row + the assign/reassign button targets if it's changed.
+  (function() {
+    var liveIncId = String(a._inc_id || a.incidentId || '');
+    if (!liveIncId) return;
+    fetch('/api/incidents/' + encodeURIComponent(liveIncId))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok || !d.incident) return;
+        var live = d.incident;
+        var cachedA = allDlp.find(function(x) { return String(x.id) === String(a.id); });
+        if (cachedA) cachedA._inc_assignedTo = live.assignedTo || '';
+        if (currentAlert && String(currentAlert.id) === String(a.id)) currentAlert._inc_assignedTo = live.assignedTo || '';
+        var overviewEl = document.getElementById('dpanel-overview');
+        if (!overviewEl || !document.getElementById('drawer').classList.contains('open')) return;
+        overviewEl.querySelectorAll('.ds-row').forEach(function(row) {
+          var keyEl = row.querySelector('.ds-key');
+          var valEl = row.querySelector('.ds-val');
+          if (keyEl && valEl && keyEl.textContent.trim() === 'Assigned To') valEl.textContent = live.assignedTo || '—';
+        });
+      }).catch(function() {});
+  })();
 }
 
 // ── OVERVIEW TAB ───────────────────────────────────────────
@@ -5409,10 +5434,11 @@ function openResolveModal() {
   rmToggleComment();
   document.getElementById('resolveBackdrop').classList.add('show');
   setTimeout(function() { document.getElementById('rm-comment').focus(); }, 200);
-  if (incId && inc._type === 'incident') {
-    // The pre-fill above used whatever was last cached in allInc, which can be
-    // stale (e.g. assigned in Defender directly, outside this app). Re-fetch
-    // this one incident live and correct the Assign To field if it's changed.
+  if (incId) {
+    // The pre-fill above used whatever was last cached (allInc for an incident
+    // row, or the server's last /api/dlp-alerts snapshot for an alert row),
+    // which can be stale (e.g. assigned in Defender directly, outside this
+    // app). Re-fetch this incident live and correct the Assign To field.
     fetch('/api/incidents/' + encodeURIComponent(incId))
       .then(function(r) { return r.json(); })
       .then(function(d) {
