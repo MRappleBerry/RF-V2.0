@@ -4007,6 +4007,24 @@ def make_handler(manager: AutomationManager, root: Path, auth_service):
 					except Exception:
 						pass
 					_snow_caller_email, _ = _snow_identity_for_user(root, current_user)
+
+					# Resolution Notes in the Report tab's database is otherwise
+					# manual-entry-only (see AUTO_COLS below) — carry the Resolve
+					# modal's comment into it for every alert under this incident,
+					# so it doesn't have to be re-typed separately.
+					_resolve_comment = str(payload.get("comment") or "").strip()
+					if _resolve_comment:
+						try:
+							_rn_con = _snow_report_db_connect(root)
+							_rn_con.execute(
+								"UPDATE dlp_report SET resolution_notes = ?, updated_at = ? WHERE incident_id = ?",
+								(_resolve_comment, datetime.now().astimezone().isoformat(timespec="seconds"), str(incident_id_from_path)),
+							)
+							_rn_con.commit()
+							_rn_con.close()
+						except Exception:
+							pass
+
 					started, response_payload = manager.start_incident_resolve_process(
 						incident_id_from_path,
 						source=str(payload.get("source") or "resolve modal").strip() or "resolve modal",
